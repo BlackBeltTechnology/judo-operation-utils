@@ -374,7 +374,7 @@
                     <obrRepository>NONE</obrRepository>
                     <instructions>
                         <Export-Package>
-                            hu.blackbelt.judo.dao.api*;version=${project.version}
+                            hu.blackbelt.judo.operation.utils*;version=${project.version}
                         </Export-Package>
 
                         <Import-Package>
