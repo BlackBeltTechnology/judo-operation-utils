@@ -50,9 +50,9 @@
 
         <log4j.configuration>log4j.properties</log4j.configuration>
 
-        <judo-dao-api-version></judo-dao-api-version>
-        <judo-dispatcher-api-version></judo-dispatcher-api-version>
-        <judo-meta-asm-version></judo-meta-asm-version>
+        <judo-dao-api-version>1.0.0.20200228_205257_ff7b104_develop</judo-dao-api-version>
+        <judo-dispatcher-api-version>1.0.0.20200220_093445_2d714d1_develop</judo-dispatcher-api-version>
+        <judo-meta-asm-version>1.0.0.20200312_085852_14b61ba_develop</judo-meta-asm-version>
     </properties>
 
     <url>http://github.com/${project-repositoryId}</url>
@@ -73,7 +73,7 @@
 
         <dependency>
             <groupId>hu.blackbelt.judo.meta</groupId>
-            <artifactId>hu.blackbelt.judo.meta.asm</artifactId>
+            <artifactId>hu.blackbelt.judo.meta.asm.model</artifactId>
             <version>${judo-meta-asm-version}</version>
         </dependency>
 
