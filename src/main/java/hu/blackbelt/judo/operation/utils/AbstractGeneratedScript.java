@@ -132,7 +132,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         public final Payload payload;
         public EClass clazz;
         public UUID uuid;
-        public long lastRefresh;
+        public long lastRefresh = System.currentTimeMillis();
         public boolean deleted;
 
         public Container(EClass clazz, Payload payload) {
@@ -166,6 +166,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                     .map(a -> a.getName())
                     .filter(n -> isMappedReference(clazz, n))
                     .forEach(n -> { if (!newPayload.containsKey(n)) { payload.remove(n); } });
+            lastRefresh = System.currentTimeMillis();
             log.debug(String.format("Payload %s merged as %s", newPayload, payload));
         }
 
