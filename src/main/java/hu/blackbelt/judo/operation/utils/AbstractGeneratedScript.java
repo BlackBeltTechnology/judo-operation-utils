@@ -16,10 +16,10 @@ import java.util.stream.Collectors;
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AbstractGeneratedScript.class);
-    public static final String UNMAPPEDID = "__unmappedid";
-    public static final String IDENTIFIER = "__identifier";
-    public static final String TO_IDENTIFIER = "__to_identifier";
-    public static final String MUTABLE_IDENTIFIER = "__mutable_identifier";
+    protected static final String UNMAPPEDID = "__unmappedid";
+    protected static final String IDENTIFIER = "__identifier";
+    protected static final String TO_IDENTIFIER = "__to_identifier";
+    protected static final String MUTABLE_IDENTIFIER = "__mutable_identifier";
 
     public static class Holder<T> {
         public T value;
@@ -78,9 +78,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Map<UUID, Container> unmappeds = new HashMap<>();
 
     protected void deleteContainer(Container container) {
-        if (container.uuid != null) {
-            containers.get(container.uuid).values().forEach(set -> set.forEach(Container::delete));
-            containers.remove(container.uuid);
+        if (container.getId() != null) {
+            containers.get(container.getId()).values().forEach(set -> set.forEach(Container::delete));
+            containers.remove(container.getId());
         }
     }
 
@@ -212,7 +212,6 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public class Container {
         public final Payload payload;
         public EClass clazz;
-        public UUID uuid;
         public long lastRefresh = 0;
         public boolean deleted;
         public boolean immutable;
@@ -220,12 +219,23 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
-            this.uuid = (UUID) payload.get(idProvider.getName());
         }
+
         public Container() {
             payload = null;
             clazz = null;
-            uuid = null;
+        }
+
+        public UUID getId() {
+            UUID result = getMappedId();
+            if (result == null) {
+                result = payload.getAs(UUID.class, MUTABLE_IDENTIFIER);
+            }
+            return result;
+        }
+
+        public UUID getMappedId() {
+            return payload.getAs(UUID.class, IDENTIFIER);
         }
 
         public void delete() {
@@ -258,8 +268,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         public Container refresh() {
             if (!immutable && lastWrite >= lastRefresh) {
                 lastRefresh = System.currentTimeMillis();
-                if (uuid != null) {
-                    Payload newPayload = (Payload) dao.getByIdentifier(clazz, uuid).orElseGet(() -> {
+                if (getMappedId() != null) {
+                    Payload newPayload = (Payload) dao.getByIdentifier(clazz, getMappedId()).orElseGet(() -> {
                         deleted = true;
                         return Payload.empty();
                     });
@@ -336,7 +346,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected void deleteElement(Container container) {
         if (isMapped(container.clazz)) {
-            dao.delete(container.clazz, container.uuid);
+            dao.delete(container.clazz, container.getId());
         }
         deleteContainer(container);
         write();
