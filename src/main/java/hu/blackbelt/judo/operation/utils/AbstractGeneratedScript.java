@@ -19,7 +19,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected static final String UNMAPPEDID = "__unmappedid";
     protected static final String IDENTIFIER = "__identifier";
     protected static final String TO_IDENTIFIER = "__to_identifier";
+    /** Set when the container is an immutable copy of an entity with IDENTIFIER */
     protected static final String MUTABLE_IDENTIFIER = "__mutable_identifier";
+    /** Set to the actual transfer object type when entity is looked up via 'select all' (e.g. demo::entities::Person) or created with new (e.g. new demo::entities::Person) */
+    public static final String TO_TYPE = "__toType";
 
     public static class Holder<T> {
         public T value;
@@ -97,7 +100,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createImmutableContainer(Container container) {
-        Payload newPayload = Payload.asPayload(container.payload);
+        Payload newPayload = Payload.asPayload(container.refresh().payload);
         if (newPayload.containsKey(IDENTIFIER)) {
             newPayload.put(MUTABLE_IDENTIFIER, newPayload.remove(IDENTIFIER));
         }
@@ -157,7 +160,12 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 payloadsToProcess = Collections.emptySet();
             }
             payloadsToProcess.forEach(p -> {
-                String toType = p.getAs(String.class, "__toType");
+                if (payload.containsKey(MUTABLE_IDENTIFIER)) {
+                    if (p.containsKey(IDENTIFIER)) {
+                        p.put(MUTABLE_IDENTIFIER, p.remove(IDENTIFIER));
+                    }
+                }
+                String toType = p.getAs(String.class, TO_TYPE);
                 createContainer(toType == null ? null : asmUtils.getClassByFQName(toType).orElse(null), p);
             });
         }
