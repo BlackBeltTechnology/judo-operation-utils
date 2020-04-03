@@ -99,14 +99,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return result;
     }
 
-    protected Container createImmutableContainer(Container container) {
-        Payload newPayload = Payload.asPayload(container.refresh().payload);
-        if (newPayload.containsKey(IDENTIFIER)) {
-            newPayload.put(MUTABLE_IDENTIFIER, newPayload.remove(IDENTIFIER));
+    protected Container createImmutableContainer(EClass clazz, Payload payload) {
+        if (payload.containsKey(IDENTIFIER)) {
+            payload.put(MUTABLE_IDENTIFIER, payload.remove(IDENTIFIER));
         }
-        Container newContainer = createContainer(container.clazz, newPayload);
+        Container newContainer = createContainer(clazz, payload);
         newContainer.immutable = true;
         return newContainer;
+    }
+
+    protected Container createImmutableContainer(Container container) {
+        Payload newPayload = Payload.asPayload(container.refresh().payload);
+        return createImmutableContainer(container.clazz, newPayload);
     }
 
     protected List<Container> createImmutableContainerList(List<Container> containers) {
@@ -359,5 +363,32 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         deleteContainer(container);
         write();
     }
+
+    @Override
+    public Payload apply(Payload exchange) {
+        log.debug("Operation called with exchange: " + exchange);
+        Holder<Payload> outputHolder = new Holder<>();
+        doApply(exchange, outputHolder);
+        if (this.outputName != null) {
+            if (outputHolder.value == null) {
+                if (this.outputLowerBound != 0) {
+                    throw new RuntimeException("Script output is not set (missing return statement).");
+                } else {
+                    if (this.outputUpperBound == 1) {
+                        outputHolder.value = Payload.map(this.outputName, Payload.empty());
+                    } else {
+                        outputHolder.value = Payload.map(this.outputName, new HashSet<Payload>());
+                    }
+                }
+
+            }
+            return outputHolder.value;
+        } else {
+            return null;
+        }
+    }
+
+    protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
+
 
 }
