@@ -56,6 +56,14 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         this.asmUtils = new AsmUtils(asmModel.getResourceSet());
     }
 
+    protected String getFqName(String namespace, String name) {
+        return replaceSeparator(String.format("%s::%s", namespace, name));
+    }
+
+    protected String replaceSeparator(String fqName) {
+        return fqName.replaceAll("::", ".");
+    }
+
     protected long lastWrite = System.currentTimeMillis();
 
     protected void write() {
@@ -362,6 +370,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
         deleteContainer(container);
         write();
+    }
+
+    protected List<Container> containersForAll(String namespace, String name) {
+        String fqName = getFqName(namespace, name);
+        List<Container> result = new ArrayList<>();
+        EClass clazz = asmUtils.getClassByFQName(fqName).get();
+        List<Payload> payloads = dao.getAllOf(clazz);
+        for (Payload payload : payloads) {
+            payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
+            result.add(createContainer(clazz, payload));
+        }
+        return result;
     }
 
     @Override
