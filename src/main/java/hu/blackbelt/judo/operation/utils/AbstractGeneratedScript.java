@@ -204,6 +204,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             }
         } else {
             payload.put(TO_IDENTIFIER, UUID.randomUUID());
+            payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
             result = new Container(clazz, payload);
             Set<Container> existingContainers = containerMap.computeIfAbsent(className, k -> new HashSet<>());
             existingContainers.add(result);
@@ -382,6 +383,25 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             result.add(createContainer(clazz, payload));
         }
         return result;
+    }
+
+    protected void updateAttribute(Container container, String attributeName, Object assignableObject) {
+        Payload instance;
+        if (isMapped(container.clazz)) {
+            instance = (Payload) dao.getByIdentifier(container.clazz, container.getId()).get();
+        } else {
+            instance = container.getPayload();
+        }
+        instance.put(attributeName, assignableObject);
+        if (isMapped(container.clazz)) {
+            if (isMappedAttribute(container.clazz, attributeName)) {
+                container.updatePayload(dao.update(container.clazz, instance));
+            } else {
+                container.updatePayload(instance);
+            }
+        }
+        write();
+
     }
 
     @Override
