@@ -8,6 +8,7 @@ import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.ENamedElement;
+import org.eclipse.emf.ecore.EReference;
 
 import java.util.*;
 import java.util.function.Function;
@@ -255,6 +256,28 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return result;
         }
 
+        @Override
+        public boolean equals(Object obj) {
+            boolean result = false;
+            if (obj instanceof Container) {
+                Container other = (Container)obj;
+                if (Objects.equals(getMappedId(), other.getMappedId())) {
+                    result = true;
+                } else {
+                    result = super.equals(obj);
+                }
+            }
+            return result;
+        }
+
+        public int hashCode() {
+            if (getMappedId() != null) {
+                return getMappedId().hashCode();
+            } else {
+                return super.hashCode();
+            }
+        }
+
         public UUID getMappedId() {
             return payload.getAs(UUID.class, IDENTIFIER);
         }
@@ -402,6 +425,31 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
         write();
 
+    }
+
+    protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
+        Set<Container> result = new HashSet<>();
+        for (Container container : containers) {
+            result.addAll(containersFromNavigation(container, referenceName));
+        }
+        return result;
+    }
+
+    protected Set<Container> containersFromNavigation(Container container, String referenceName) {
+            Set<Container> result = new HashSet<>();
+            EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
+            List<Payload> payloads;
+            if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
+                    payloads = dao.getNavigationResultAt(container.getId(), ref);
+            } else {
+                    payloads = container.getPayload().containsKey(referenceName) ?
+                            new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
+                            new ArrayList<>();
+            }
+            for (Payload payload : payloads) {
+                result.add(createContainer(ref.getEReferenceType(), payload));
+            }
+            return result;
     }
 
     @Override
