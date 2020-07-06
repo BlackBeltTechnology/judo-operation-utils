@@ -122,7 +122,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return createImmutableContainer(container.clazz, newPayload);
     }
 
-    protected List<Container> createImmutableContainerList(List<Container> containers) {
+    protected Collection<Container> createImmutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
         for (Container container : containers) {
             result.add(createImmutableContainer(container));
@@ -130,7 +130,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return result;
     }
 
-    protected List<Container> createMutableContainerList(List<Container> containers) {
+    protected Collection<Container> createMutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
         for (Container container : containers) {
             result.add(createMutableContainer(container));
@@ -396,7 +396,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         write();
     }
 
-    protected List<Container> containersForAll(String namespace, String name) {
+    protected Collection<Container> containersForAll(String namespace, String name) {
         String fqName = getFqName(namespace, name);
         List<Container> result = new ArrayList<>();
         EClass clazz = asmUtils.getClassByFQName(fqName).get();
