@@ -6,9 +6,7 @@ import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
-import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.ENamedElement;
-import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.*;
 
 import java.util.*;
 import java.util.function.Function;
@@ -25,6 +23,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     /** Set to the actual transfer object type when entity is looked up via 'select all' (e.g. demo::entities::Person) or created with new (e.g. new demo::entities::Person) */
     public static final String TO_TYPE = "__toType";
 
+    protected AbstractGeneratedScript() {
+        functionRunner = new FunctionRunner(this);
+    }
+
     public static class Holder<T> {
         public T value;
     }
@@ -39,6 +41,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected String outputName;
     protected int outputLowerBound;
     protected int outputUpperBound;
+
+    protected FunctionRunner functionRunner;
 
     public void setDao(DAO<UUID> dao) {
         this.dao = dao;
@@ -474,6 +478,12 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         } else {
             return null;
         }
+    }
+
+    protected Integer getEnumOrdinal(String enumNamespace, String enumName, String enumValue) {
+        String enumFqName = replaceSeparator(getFqName(enumNamespace, enumName));
+        EEnum eEnum = (EEnum) asmUtils.resolve(enumFqName).get();
+        return eEnum.getEEnumLiteral(enumValue).getValue();
     }
 
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
