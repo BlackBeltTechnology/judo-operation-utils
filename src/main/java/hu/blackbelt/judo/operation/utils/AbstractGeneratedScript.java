@@ -10,6 +10,7 @@ import org.eclipse.emf.ecore.*;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
@@ -486,7 +487,22 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return eEnum.getEEnumLiteral(enumValue).getValue();
     }
 
-    protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
+    protected Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
+        return containers.stream().filter(container -> {
+            Holder<Container> containerHolder = new Holder<>();
+            containerHolder.value = container;
+            return predicate.test(containerHolder);
+        }).collect(Collectors.toSet());
+    }
 
+    protected Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
+        return !filter(containers, predicate).isEmpty();
+    }
+
+    protected Boolean forAll(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
+        return filter(containers, predicate).size() == containers.size();
+    }
+
+    protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
 
 }
