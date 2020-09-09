@@ -30,6 +30,15 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     public static class Holder<T> {
         public T value;
+
+        public Holder() {
+
+        }
+
+        public Holder(T value) {
+            this.value = value;
+        }
+
     }
 
     protected DAO dao;
@@ -485,22 +494,6 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         String enumFqName = replaceSeparator(getFqName(enumNamespace, enumName));
         EEnum eEnum = (EEnum) asmUtils.resolve(enumFqName).get();
         return eEnum.getEEnumLiteral(enumValue).getValue();
-    }
-
-    protected Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return containers.stream().filter(container -> {
-            Holder<Container> containerHolder = new Holder<>();
-            containerHolder.value = container;
-            return predicate.test(containerHolder);
-        }).collect(Collectors.toSet());
-    }
-
-    protected Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return !filter(containers, predicate).isEmpty();
-    }
-
-    protected Boolean forAll(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return filter(containers, predicate).size() == containers.size();
     }
 
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
