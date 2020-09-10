@@ -10,6 +10,7 @@ import org.eclipse.emf.ecore.*;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
@@ -29,6 +30,15 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     public static class Holder<T> {
         public T value;
+
+        public Holder() {
+
+        }
+
+        public Holder(T value) {
+            this.value = value;
+        }
+
     }
 
     protected DAO dao;
@@ -487,6 +497,5 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
-
 
 }
