@@ -39,6 +39,19 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             this.value = value;
         }
 
+        public T getValue() {
+            return value;
+        }
+    }
+
+    public static class SortOrderBy<T extends Comparable> {
+        public Function<Holder<Container>, T> generator;
+        public boolean descending;
+
+        public SortOrderBy(Function<Holder<Container>, T> generator, boolean descending) {
+            this.generator = generator;
+            this.descending = descending;
+        }
     }
 
     protected DAO dao;
@@ -221,7 +234,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             payload.put(TO_IDENTIFIER, UUID.randomUUID());
             payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
             result = new Container(clazz, payload);
-            Set<Container> existingContainers = containerMap.computeIfAbsent(className, k -> new HashSet<>());
+            Set<Container> existingContainers = containerMap.computeIfAbsent(className, k -> new LinkedHashSet<>());
             existingContainers.add(result);
             containerMap.put(className, existingContainers);
         }
@@ -237,7 +250,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         } else if (payload.containsKey(IDENTIFIER)) {
             Map<String, Set<Container>> map = containers.get(payload.getAs(UUID.class, IDENTIFIER));
             if (map != null) {
-                return Optional.of(map.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()));
+                return Optional.of(map.values().stream().flatMap(Collection::stream).collect(Collectors.toCollection(LinkedHashSet::new)));
             } else {
                 return Optional.empty();
             }
@@ -333,7 +346,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                     });
                     updatePayload(newPayload);
                 } else {
-                    Set<String> removableKeys = new HashSet<>();
+                    Set<String> removableKeys = new LinkedHashSet<>();
                     for (Map.Entry<String, Object> entry : payload.entrySet()) {
                         if (entry.getValue() instanceof Payload) {
                             Payload contentPayload = (Payload) entry.getValue();
@@ -442,7 +455,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
-        Set<Container> result = new HashSet<>();
+        Set<Container> result = new LinkedHashSet<>();
         for (Container container : containers) {
             result.addAll(containersFromNavigation(container, referenceName));
         }
@@ -450,7 +463,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Set<Container> containersFromNavigation(Container container, String referenceName) {
-            Set<Container> result = new HashSet<>();
+            Set<Container> result = new LinkedHashSet<>();
             EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
             List<Payload> payloads;
             if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
@@ -479,7 +492,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                     if (this.outputUpperBound == 1) {
                         outputHolder.value = Payload.map(this.outputName, Payload.empty());
                     } else {
-                        outputHolder.value = Payload.map(this.outputName, new HashSet<Payload>());
+                        outputHolder.value = Payload.map(this.outputName, new LinkedHashSet<Payload>());
                     }
                 }
 

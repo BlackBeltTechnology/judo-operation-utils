@@ -1,16 +1,22 @@
 package hu.blackbelt.judo.operation.utils;
 
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
+import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
+import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FunctionRunner {
     private final AbstractGeneratedScript script;
@@ -73,45 +79,45 @@ public class FunctionRunner {
         return text.replaceAll(Pattern.quote(pattern), replacement);
     }
 
-    public Collection<Container> filter(Collection<Container> containers, Predicate<AbstractGeneratedScript.Holder<Container>> predicate) {
+    public Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
         return containers.stream().filter(container -> {
             return predicate.test(containerHolder(container));
         }).collect(Collectors.toSet());
     }
 
-    public Boolean exists(Collection<Container> containers, Predicate<AbstractGeneratedScript.Holder<Container>> predicate) {
+    public Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
         return !filter(containers, predicate).isEmpty();
     }
 
-    public Boolean forAll(Collection<Container> containers, Predicate<AbstractGeneratedScript.Holder<Container>> predicate) {
+    public Boolean forAll(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
         return filter(containers, predicate).size() == containers.size();
     }
 
-    public <T extends Comparable<T>> T max(Collection<Container> containers, Function<AbstractGeneratedScript.Holder<Container>, T> generator) {
+    public <T extends Comparable<T>> T max(Collection<Container> containers, Function<Holder<Container>, T> generator) {
         return containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
         }).max(Comparator.naturalOrder()).get();
     }
 
-    public <T extends Comparable<T>> T min(Collection<Container> containers, Function<AbstractGeneratedScript.Holder<Container>, T> generator) {
+    public <T extends Comparable<T>> T min(Collection<Container> containers, Function<Holder<Container>, T> generator) {
         return containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
         }).min(Comparator.naturalOrder()).get();
     }
 
-    public BigInteger sumInteger(Collection<Container> containers, Function<AbstractGeneratedScript.Holder<Container>, BigInteger> generator) {
+    public BigInteger sumInteger(Collection<Container> containers, Function<Holder<Container>, BigInteger> generator) {
         return containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
         }).reduce(BigInteger.ZERO, BigInteger::add);
     }
 
-    public BigDecimal sumDecimal(Collection<Container> containers, Function<AbstractGeneratedScript.Holder<Container>, BigDecimal> generator) {
+    public BigDecimal sumDecimal(Collection<Container> containers, Function<Holder<Container>, BigDecimal> generator) {
         return containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
         }).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public BigDecimal avg(Collection<Container> containers, Function<AbstractGeneratedScript.Holder<Container>, BigDecimal> generator) {
+    public BigDecimal avg(Collection<Container> containers, Function<Holder<Container>, BigDecimal> generator) {
         int count = containers.size();
         BigDecimal sum = (BigDecimal) containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
@@ -127,8 +133,32 @@ public class FunctionRunner {
         return containers.contains(object);
     }
 
-    private static AbstractGeneratedScript.Holder<Container> containerHolder(Container container) {
-        return new AbstractGeneratedScript.Holder<>(container);
+    public <T extends Comparable> Collection<Container> sort(Collection<Container> containers, SortOrderBy<T>... orderByList) {
+        if (orderByList.length == 0) {
+            return containers.stream().sorted(Comparator.comparing(Container::getId)).collect(Collectors.toList());
+        }
+        Collection<Container> sorted = containers;
+        for (SortOrderBy<T> orderBy : orderByList) {
+            Function<Holder<Container>, T> generatorFunction = orderBy.generator;
+            List<Container> sortedContainerList= sorted.stream().map(FunctionRunner::containerHolder).sorted((h1, h2) -> {
+                T o1 = generatorFunction.apply(h1);
+                T o2 = generatorFunction.apply(h2);
+                int compareResult = o1.compareTo(o2);
+                if (compareResult == 0) {
+                    compareResult = h1.value.getId().compareTo(h2.value.getId());
+                }
+                return compareResult;
+            }).map(Holder::getValue).collect(Collectors.toList());
+            if (orderBy.descending) {
+                Collections.reverse(sortedContainerList);
+            }
+            sorted = sortedContainerList;
+        }
+        return sorted;
+    }
+
+    private static Holder<Container> containerHolder(Container container) {
+        return new Holder<>(container);
     }
 
 }
