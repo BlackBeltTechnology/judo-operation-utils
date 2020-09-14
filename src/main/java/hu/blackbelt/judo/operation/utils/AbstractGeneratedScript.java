@@ -10,7 +10,6 @@ import org.eclipse.emf.ecore.*;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
@@ -19,9 +18,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected static final String UNMAPPEDID = "__unmappedid";
     protected static final String IDENTIFIER = "__identifier";
     protected static final String TO_IDENTIFIER = "__to_identifier";
-    /** Set when the container is an immutable copy of an entity with IDENTIFIER */
+    /**
+     * Set when the container is an immutable copy of an entity with IDENTIFIER
+     */
     protected static final String MUTABLE_IDENTIFIER = "__mutable_identifier";
-    /** Set to the actual transfer object type when entity is looked up via 'select all' (e.g. demo::entities::Person) or created with new (e.g. new demo::entities::Person) */
+    /**
+     * Set to the actual transfer object type when entity is looked up via 'select all' (e.g. demo::entities::Person) or created with new (e.g. new demo::entities::Person)
+     */
     public static final String TO_TYPE = "__toType";
 
     protected AbstractGeneratedScript() {
@@ -173,40 +176,56 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             if (payload.containsKey(IDENTIFIER)) {
                 result = createOrReturnMappedContainer(clazz, payload);
             } else {
-                result = createUnmappedContainer(clazz, payload);
+                result = createUnmappedOrImmutableContainer(clazz, payload);
             }
         }
         return result;
     }
 
-    private Container createUnmappedContainer(EClass clazz, Payload payload) {
+    private Container createUnmappedOrImmutableContainer(EClass clazz, Payload payload) {
+        Payload newPayload;
+        if (!isMapped(clazz)) {
+            newPayload = dao.getStaticFeatures(clazz);
+            for (String key : payload.keySet()) {
+                newPayload.put(key, payload.get(key));
+            }
+        } else {
+            newPayload = payload;
+        }
         Container result;
         UUID unmappedId;
-        if (!payload.containsKey(UNMAPPEDID)) {
+        if (!newPayload.containsKey(UNMAPPEDID)) {
             unmappedId = UUID.randomUUID();
-            payload.put(UNMAPPEDID, unmappedId);
+            newPayload.put(UNMAPPEDID, unmappedId);
         } else {
-            unmappedId = payload.getAs(UUID.class, UNMAPPEDID);
+            unmappedId = newPayload.getAs(UUID.class, UNMAPPEDID);
         }
-        result = new Container(clazz, payload);
+        result = new Container(clazz, newPayload);
         unmappeds.put(unmappedId, result);
-        for (Map.Entry<String, Object> entry : payload.entrySet()) {
+        for (Map.Entry<String, Object> entry : newPayload.entrySet()) {
             Collection<Payload> payloadsToProcess;
             if (entry.getValue() instanceof Payload) {
                 payloadsToProcess = Collections.singleton((Payload) entry.getValue());
             } else if (entry.getValue() instanceof Collection) {
-                payloadsToProcess = payload.getAsCollectionPayload(entry.getKey());
+                payloadsToProcess = newPayload.getAsCollectionPayload(entry.getKey());
             } else {
                 payloadsToProcess = Collections.emptySet();
             }
             payloadsToProcess.forEach(p -> {
-                if (payload.containsKey(MUTABLE_IDENTIFIER)) {
+                if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
                     if (p.containsKey(IDENTIFIER)) {
                         p.put(MUTABLE_IDENTIFIER, p.remove(IDENTIFIER));
                     }
                 }
                 String toType = p.getAs(String.class, TO_TYPE);
-                createContainer(toType == null ? null : asmUtils.getClassByFQName(toType).orElse(null), p);
+                EClass toClass;
+                if (toType == null) {
+                    toClass = clazz.getEAllReferences().stream().filter(ref -> ref.getName().equals(entry.getKey())).findAny().map(ref -> ref.getEReferenceType()).orElse(null);
+                    p.put(TO_TYPE, AsmUtils.getClassifierFQName(toClass));
+                } else {
+                    toClass = asmUtils.getClassByFQName(toType).orElse(null);
+                }
+                createContainer(toClass, p);
             });
         }
         return result;
@@ -287,7 +306,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         public boolean equals(Object obj) {
             boolean result = false;
             if (obj instanceof Container) {
-                Container other = (Container)obj;
+                Container other = (Container) obj;
                 if (Objects.equals(getMappedId(), other.getMappedId())) {
                     result = true;
                 } else {
@@ -327,11 +346,19 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             clazz.getEAllAttributes().stream()
                     .map(ENamedElement::getName)
                     .filter(n -> isMappedAttribute(clazz, n))
-                    .forEach(n -> { if (!newPayload.containsKey(n)) { payload.remove(n); } });
+                    .forEach(n -> {
+                        if (!newPayload.containsKey(n)) {
+                            payload.remove(n);
+                        }
+                    });
             clazz.getEAllReferences().stream()
                     .map(ENamedElement::getName)
                     .filter(n -> isMappedReference(clazz, n))
-                    .forEach(n -> { if (!newPayload.containsKey(n)) { payload.remove(n); } });
+                    .forEach(n -> {
+                        if (!newPayload.containsKey(n)) {
+                            payload.remove(n);
+                        }
+                    });
             lastRefresh = System.currentTimeMillis();
             log.debug(String.format("Payload %s merged as %s", newPayload, payload));
         }
@@ -463,20 +490,20 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Set<Container> containersFromNavigation(Container container, String referenceName) {
-            Set<Container> result = new LinkedHashSet<>();
-            EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
-            List<Payload> payloads;
-            if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
-                    payloads = dao.getNavigationResultAt(container.getId(), ref);
-            } else {
-                    payloads = container.getPayload().containsKey(referenceName) ?
-                            new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
-                            new ArrayList<>();
-            }
-            for (Payload payload : payloads) {
-                result.add(createContainer(ref.getEReferenceType(), payload));
-            }
-            return result;
+        Set<Container> result = new LinkedHashSet<>();
+        EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
+        List<Payload> payloads;
+        if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
+            payloads = dao.getNavigationResultAt(container.getId(), ref);
+        } else {
+            payloads = container.getPayload().containsKey(referenceName) ?
+                    new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
+                    new ArrayList<>();
+        }
+        for (Payload payload : payloads) {
+            result.add(createContainer(ref.getEReferenceType(), payload));
+        }
+        return result;
     }
 
     @Override
