@@ -536,6 +536,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return eEnum.getEEnumLiteral(enumValue).getValue();
     }
 
+    protected Payload getStaticData(String namespace, String name, String attributeName) {
+        String typeFqName = replaceSeparator(getFqName(namespace, name));
+        EAttribute eAttribute = asmUtils.getClassByFQName(typeFqName).get().getEAttributes().stream().filter(attr -> attr.getName().equals(attributeName)).findAny().get();
+        return dao.getStaticData(eAttribute);
+    }
+
+    protected Container getStaticDataContainer(String namespace, String name) {
+        String typeFqName = replaceSeparator(getFqName(namespace, name));
+        EClass eClass = asmUtils.getClassByFQName(typeFqName).get();
+        return createUnmappedOrImmutableContainer(eClass, Payload.empty());
+    }
+
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
 
 }
