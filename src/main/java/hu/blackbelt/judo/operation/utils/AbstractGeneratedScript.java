@@ -506,6 +506,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return result;
     }
 
+    protected Container spawnContainer(EClass clazz, Container original) {
+        UUID mappedId = original.getMappedId();
+        Container container = createContainer(clazz, (Payload) dao.getByIdentifier(clazz, mappedId).get());
+        write();
+        return container;
+    }
+
     @Override
     public Payload apply(Payload exchange) {
         log.debug("Operation called with exchange: " + exchange);
