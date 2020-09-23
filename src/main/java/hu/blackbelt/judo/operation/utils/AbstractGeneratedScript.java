@@ -18,6 +18,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected static final String UNMAPPEDID = "__unmappedid";
     protected static final String IDENTIFIER = "__identifier";
     protected static final String TO_IDENTIFIER = "__to_identifier";
+    protected static final String ENTITY_TYPE = "__entityType";
     /**
      * Set when the container is an immutable copy of an entity with IDENTIFIER
      */

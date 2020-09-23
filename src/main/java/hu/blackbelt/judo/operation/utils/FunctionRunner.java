@@ -1,15 +1,14 @@
 package hu.blackbelt.judo.operation.utils;
 
+import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
+import org.eclipse.emf.ecore.EClass;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -17,6 +16,8 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.ENTITY_TYPE;
 
 public class FunctionRunner {
     private final AbstractGeneratedScript script;
@@ -159,6 +160,19 @@ public class FunctionRunner {
 
     private static Holder<Container> containerHolder(Container container) {
         return new Holder<>(container);
+    }
+
+    public boolean isAssignable(Container container, EClass targetClass) {
+        boolean result = false;
+        result = result || targetClass.equals(container.clazz);
+        if (script.asmUtils.isMappedTransferObjectType(container.clazz) && script.asmUtils.isMappedTransferObjectType(targetClass)) {
+            String entityTypeName = container.getPayload().getAs(String.class, ENTITY_TYPE);
+            EClass sourceEntityType = script.asmUtils.getClassByFQName(entityTypeName).get();
+            EClass targetEntityType = script.asmUtils.getMappedEntityType(targetClass).get();
+            result = result || sourceEntityType.equals(targetEntityType);
+            result = result || sourceEntityType.getEAllSuperTypes().contains(targetEntityType);
+        }
+        return result;
     }
 
 }
