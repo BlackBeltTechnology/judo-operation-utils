@@ -509,7 +509,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Container spawnContainer(EClass clazz, Container original) {
         UUID mappedId = original.getMappedId();
-        Container container = createContainer(clazz, (Payload) dao.getByIdentifier(clazz, mappedId).get());
+        Optional payloadByIdentifier = dao.getByIdentifier(clazz, mappedId);
+        Container container;
+        if (payloadByIdentifier.isPresent()) {
+             container = createContainer(clazz, (Payload) payloadByIdentifier.get());
+        } else {
+            container = null;
+        }
         write();
         return container;
     }
