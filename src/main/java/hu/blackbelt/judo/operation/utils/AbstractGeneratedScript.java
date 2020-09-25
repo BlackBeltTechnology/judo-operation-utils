@@ -11,6 +11,7 @@ import org.eclipse.emf.ecore.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
 
@@ -58,7 +59,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
-    protected DAO dao;
+    protected DAO<UUID> dao;
     protected Dispatcher dispatcher;
     protected IdentifierProvider<UUID> idProvider;
     protected AsmModel asmModel;
@@ -560,6 +561,27 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         String typeFqName = replaceSeparator(getFqName(namespace, name));
         EClass eClass = asmUtils.getClassByFQName(typeFqName).get();
         return createUnmappedOrImmutableContainer(eClass, Payload.empty());
+    }
+
+    protected boolean isContainment(EReference reference) {
+        return asmUtils.getMappedReference(reference).map(EReference::isContainment).get();
+    }
+
+    protected void assignNewEmbeddedCollection(Container target, EReference reference, Collection<Payload> payloads) {
+        List<Payload> currentContent = dao.getNavigationResultAt(target.getId(), reference);
+        // delete all content, except when readded
+        Set<UUID> addedIds = payloads.stream().filter(payload -> payload.containsKey(IDENTIFIER)).map(payload -> payload.getAs(UUID.class, IDENTIFIER)).collect(Collectors.toSet());
+        currentContent.stream().filter(payload -> !addedIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach(
+                payload -> dao.deleteNavigationInstanceAt(target.getId(), reference, payload));
+        List<UUID> currentIds = currentContent.stream().map(payload -> payload.getAs(UUID.class, IDENTIFIER)).collect(Collectors.toList());
+        payloads.stream().filter(payload -> !currentIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach( payload -> {
+            if (!payload.containsKey(IDENTIFIER)) {
+                dao.createNavigationInstanceAt(target.getId(), reference, payload);
+            } else {
+                dao.addReferences(reference, target.getId(), Collections.singleton(payload.getAs(UUID.class, IDENTIFIER)));
+            }
+            write();
+        });
     }
 
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
