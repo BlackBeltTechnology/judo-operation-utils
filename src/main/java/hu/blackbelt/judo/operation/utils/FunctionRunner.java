@@ -1,21 +1,20 @@
 package hu.blackbelt.judo.operation.utils;
 
+import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EOperation;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.ENTITY_TYPE;
 
@@ -173,6 +172,24 @@ public class FunctionRunner {
             result = result || sourceEntityType.getEAllSuperTypes().contains(targetEntityType);
         }
         return result;
+    }
+
+    public Container getPrincipal(EClass actorType) {
+        Optional<Container> result = actorType.getEOperations().stream().filter(this::isGetPrincipalOperation).findAny().map(
+                eOperation -> {
+                    Map<String, Object> map = script.dispatcher.callOperation(AsmUtils.getOperationFQName(eOperation), script.principalPayload);
+                    String outputParameterName = AsmUtils.getOutputParameterName(eOperation).get();
+                    Payload payload = Payload.asPayload((Map<String, Object>) map.get(outputParameterName));
+                    EClass toType = (EClass) eOperation.getEType();
+                    payload.put(AbstractGeneratedScript.TO_TYPE, AsmUtils.getClassifierFQName(toType));
+                    return script.createContainer(toType, payload);
+                }
+        );
+        return result.orElse(null);
+    }
+
+    private boolean isGetPrincipalOperation(EOperation eOperation) {
+        return AsmUtils.getBehaviour(eOperation).filter(AsmUtils.OperationBehaviour.GET_PRINCIPAL::equals).isPresent();
     }
 
 }

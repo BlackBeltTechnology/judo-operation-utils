@@ -69,6 +69,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected String outputName;
     protected int outputLowerBound;
     protected int outputUpperBound;
+    protected Payload principalPayload;
 
     protected FunctionRunner functionRunner;
 
@@ -524,6 +525,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     @Override
     public Payload apply(Payload exchange) {
         log.debug("Operation called with exchange: " + exchange);
+        this.principalPayload = exchange.getAsPayload(Dispatcher.PRINCIPAL_KEY);
         Holder<Payload> outputHolder = new Holder<>();
         doApply(exchange, outputHolder);
         if (this.outputName != null) {
