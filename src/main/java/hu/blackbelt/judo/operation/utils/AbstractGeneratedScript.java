@@ -4,6 +4,7 @@ import hu.blackbelt.judo.dao.api.DAO;
 import hu.blackbelt.judo.dao.api.IdentifierProvider;
 import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.dispatcher.api.Dispatcher;
+import hu.blackbelt.judo.dispatcher.api.JudoPrincipal;
 import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.*;
@@ -69,7 +70,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected String outputName;
     protected int outputLowerBound;
     protected int outputUpperBound;
-    protected Payload principalPayload;
+    protected JudoPrincipal principal;
 
     protected FunctionRunner functionRunner;
 
@@ -525,7 +526,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     @Override
     public Payload apply(Payload exchange) {
         log.debug("Operation called with exchange: " + exchange);
-        this.principalPayload = exchange.getAsPayload(Dispatcher.PRINCIPAL_KEY);
+        if (exchange != null) {
+            this.principal = exchange.getAs(JudoPrincipal.class, Dispatcher.PRINCIPAL_KEY);
+        }
         Holder<Payload> outputHolder = new Holder<>();
         doApply(exchange, outputHolder);
         if (this.outputName != null) {

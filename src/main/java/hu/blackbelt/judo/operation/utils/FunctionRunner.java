@@ -1,6 +1,7 @@
 package hu.blackbelt.judo.operation.utils;
 
 import hu.blackbelt.judo.dao.api.Payload;
+import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
@@ -140,7 +141,7 @@ public class FunctionRunner {
         Collection<Container> sorted = containers;
         for (SortOrderBy<T> orderBy : orderByList) {
             Function<Holder<Container>, T> generatorFunction = orderBy.generator;
-            List<Container> sortedContainerList= sorted.stream().map(FunctionRunner::containerHolder).sorted((h1, h2) -> {
+            List<Container> sortedContainerList = sorted.stream().map(FunctionRunner::containerHolder).sorted((h1, h2) -> {
                 T o1 = generatorFunction.apply(h1);
                 T o2 = generatorFunction.apply(h2);
                 int compareResult = o1.compareTo(o2);
@@ -175,17 +176,24 @@ public class FunctionRunner {
     }
 
     public Container getPrincipal(EClass actorType) {
-        Optional<Container> result = actorType.getEOperations().stream().filter(this::isGetPrincipalOperation).findAny().map(
-                eOperation -> {
-                    Map<String, Object> map = script.dispatcher.callOperation(AsmUtils.getOperationFQName(eOperation), script.principalPayload);
-                    String outputParameterName = AsmUtils.getOutputParameterName(eOperation).get();
-                    Payload payload = Payload.asPayload((Map<String, Object>) map.get(outputParameterName));
-                    EClass toType = (EClass) eOperation.getEType();
-                    payload.put(AbstractGeneratedScript.TO_TYPE, AsmUtils.getClassifierFQName(toType));
-                    return script.createContainer(toType, payload);
-                }
-        );
-        return result.orElse(null);
+        Container result = null;
+        if (isCurrentActor(actorType)) {
+            result = actorType.getEOperations().stream().filter(this::isGetPrincipalOperation).findAny().map(
+                    eOperation -> {
+                        Map<String, Object> map = script.dispatcher.callOperation(AsmUtils.getOperationFQName(eOperation), Payload.map(Dispatcher.PRINCIPAL_KEY, script.principal));
+                        String outputParameterName = AsmUtils.getOutputParameterName(eOperation).get();
+                        Payload payload = Payload.asPayload((Map<String, Object>) map.get(outputParameterName));
+                        EClass toType = (EClass) eOperation.getEType();
+                        payload.put(AbstractGeneratedScript.TO_TYPE, AsmUtils.getClassifierFQName(toType));
+                        return script.createContainer(toType, payload);
+                    }
+            ).orElse(null);
+        }
+        return result;
+    }
+
+    public boolean  isCurrentActor(EClass actorType) {
+        return script.principal != null && AsmUtils.getClassifierFQName(actorType).equals(script.principal.getClient());
     }
 
     private boolean isGetPrincipalOperation(EOperation eOperation) {
