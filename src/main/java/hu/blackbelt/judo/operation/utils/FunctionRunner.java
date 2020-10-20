@@ -15,7 +15,9 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.ENTITY_TYPE;
 
@@ -28,14 +30,6 @@ public class FunctionRunner {
 
     public Container any(Collection<Container> collection) {
         return head(collection);
-    }
-
-    public Container head(Collection<Container> collection) {
-        if (collection == null || collection.isEmpty()) {
-            return null;
-        } else {
-            return collection.iterator().next();
-        }
     }
 
     public BigInteger count(Collection<Container> collection) {
@@ -134,28 +128,143 @@ public class FunctionRunner {
         return containers.contains(object);
     }
 
-    public <T extends Comparable> Collection<Container> sort(Collection<Container> containers, SortOrderBy<T>... orderByList) {
+    public <T extends Comparable> List<Container> applySorting(Collection<Holder<Container>> containers, SortOrderBy<T>[] orderByList) {
+        Comparator<Holder<Container>> comparator = createComparatorFromSortOrderBys(orderByList);
+        Comparator<Holder<Container>> idComparator = Comparator.comparing(h -> h.value.getId());
+        comparator = comparator.thenComparing(idComparator);
+        return containers.stream().sorted(comparator).map(Holder::getValue).collect(Collectors.toList());
+    }
+
+    private <T extends Comparable> Comparator<Holder<Container>> createComparatorFromSortOrderBys(SortOrderBy<T>[] orderByList) {
+        int currentIndex = 0;
+        Comparator<Holder<Container>> comparator = Comparator.comparing(orderByList[currentIndex].generator);
+        if (orderByList[currentIndex].descending) {
+            comparator = comparator.reversed();
+        }
+        currentIndex++;
+        while (currentIndex < orderByList.length) {
+            Comparator<Holder<Container>> newComparator = Comparator.comparing(orderByList[currentIndex].generator);
+            if (orderByList[currentIndex].descending) {
+                newComparator = newComparator.reversed();
+            }
+            comparator = comparator.thenComparing(newComparator);
+            currentIndex++;
+        }
+        return comparator;
+    }
+
+    public <T extends Comparable> List<Container> sort(Collection<Container> containers, SortOrderBy<T>... orderByList) {
         if (orderByList.length == 0) {
             return containers.stream().sorted(Comparator.comparing(Container::getId)).collect(Collectors.toList());
         }
-        Collection<Container> sorted = containers;
-        for (SortOrderBy<T> orderBy : orderByList) {
-            Function<Holder<Container>, T> generatorFunction = orderBy.generator;
-            List<Container> sortedContainerList = sorted.stream().map(FunctionRunner::containerHolder).sorted((h1, h2) -> {
-                T o1 = generatorFunction.apply(h1);
-                T o2 = generatorFunction.apply(h2);
-                int compareResult = o1.compareTo(o2);
-                if (compareResult == 0) {
-                    compareResult = h1.value.getId().compareTo(h2.value.getId());
-                }
-                return compareResult;
-            }).map(Holder::getValue).collect(Collectors.toList());
-            if (orderBy.descending) {
-                Collections.reverse(sortedContainerList);
+        return applySorting(containers.stream().map(FunctionRunner::containerHolder).collect(Collectors.toList()), orderByList);
+    }
+
+    public <T extends Comparable> Container head(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        } else {
+            Collection<Container> result;
+            if (orderByList != null) {
+                result = sort(collection, orderByList);
+            } else {
+                result = collection;
             }
-            sorted = sortedContainerList;
+            return result.iterator().next();
         }
-        return sorted;
+    }
+
+    public <T extends Comparable> Container tail(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        } else {
+            List<Container> result;
+            if (orderByList != null) {
+                result = sort(collection, orderByList);
+            } else {
+                result = new ArrayList<>(collection);
+            }
+            Collections.reverse(result);
+            return result.iterator().next();
+        }
+    }
+
+    static <T> Collector<T, ?, List<T>> maxList(Comparator<? super T> comparator) {
+        return Collector.of(
+                ArrayList::new,
+                (list, t) -> {
+                    int comparatorResult;
+                    if (list.isEmpty() || (comparatorResult = comparator.compare(t, list.get(0))) == 0) {
+                        list.add(t);
+                    } else if (comparatorResult > 0) {
+                        list.clear();
+                        list.add(t);
+                    }
+                },
+                (list1, list2) -> {
+                    if (list1.isEmpty()) {
+                        return list2;
+                    }
+                    if (list2.isEmpty()) {
+                        return list1;
+                    }
+                    int r = comparator.compare(list1.get(0), list2.get(0));
+                    if (r < 0) {
+                        return list2;
+                    } else if (r > 0) {
+                        return list1;
+                    } else {
+                        list1.addAll(list2);
+                        return list1;
+                    }
+                });
+    }
+
+    static <T> Collector<T, ?, List<T>> minList(Comparator<? super T> comparator) {
+        return Collector.of(
+                ArrayList::new,
+                (list, t) -> {
+                    int comparatorResult;
+                    if (list.isEmpty() || (comparatorResult = comparator.compare(t, list.get(0))) == 0) {
+                        list.add(t);
+                    } else if (comparatorResult < 0) {
+                        list.clear();
+                        list.add(t);
+                    }
+                },
+                (list1, list2) -> {
+                    if (list1.isEmpty()) {
+                        return list2;
+                    }
+                    if (list2.isEmpty()) {
+                        return list1;
+                    }
+                    int r = comparator.compare(list1.get(0), list2.get(0));
+                    if (r < 0) {
+                        return list1;
+                    } else if (r > 0) {
+                        return list2;
+                    } else {
+                        list1.addAll(list2);
+                        return list1;
+                    }
+                });
+    }
+
+    public <T extends Comparable> Collection<Container> heads(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        } else {
+            return collection.stream().map(FunctionRunner::containerHolder).collect(minList(createComparatorFromSortOrderBys(orderByList))).stream().map(Holder::getValue).collect(Collectors.toList());
+        }
+    }
+
+    public <T extends Comparable> Collection<Container> tails(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        } else {
+            return collection.stream().map(FunctionRunner::containerHolder).collect(maxList(createComparatorFromSortOrderBys(orderByList))).stream().map(Holder::getValue).collect(Collectors.toList());
+        }
     }
 
     private static Holder<Container> containerHolder(Container container) {
