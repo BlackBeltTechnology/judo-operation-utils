@@ -29,7 +29,7 @@ public class FunctionRunner {
     }
 
     public Container any(Collection<Container> collection) {
-        return head(collection);
+        return collection.iterator().next();
     }
 
     public BigInteger count(Collection<Container> collection) {
