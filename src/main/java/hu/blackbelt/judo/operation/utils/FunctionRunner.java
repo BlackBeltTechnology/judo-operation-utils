@@ -60,7 +60,7 @@ public class FunctionRunner {
     }
 
     public Boolean matches(String text, String pattern) {
-        if (text == null) {
+        if (text == null || pattern == null) {
             return null;
         }
         return text.matches(pattern);
