@@ -29,7 +29,11 @@ public class FunctionRunner {
     }
 
     public Container any(Collection<Container> collection) {
-        return collection.iterator().next();
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        } else {
+            return collection.iterator().next();
+        }
     }
 
     public BigInteger count(Collection<Container> collection) {
