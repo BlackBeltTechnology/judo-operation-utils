@@ -11,6 +11,10 @@ import org.eclipse.emf.ecore.EOperation;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -118,7 +122,7 @@ public class FunctionRunner {
 
     public BigDecimal avg(Collection<Container> containers, Function<Holder<Container>, BigDecimal> generator) {
         int count = containers.size();
-        BigDecimal sum = (BigDecimal) containers.stream().map(container -> {
+        BigDecimal sum = containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
         }).reduce(BigDecimal.ZERO, BigDecimal::add);
         if (count > 0) {
@@ -126,6 +130,20 @@ public class FunctionRunner {
         } else {
             return BigDecimal.ZERO;
         }
+    }
+
+    public LocalDate avgDate(Collection<Container> containers, Function<Holder<Container>, LocalDate> generator) {
+        double average = containers.stream().map(container -> {
+            return generator.apply(containerHolder(container));
+        }).mapToLong(d -> d.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()).average().getAsDouble();
+        return Instant.ofEpochMilli(Math.round(average)).atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    public OffsetDateTime avgTimestamp(Collection<Container> containers, Function<Holder<Container>, OffsetDateTime> generator) {
+        double average = containers.stream().map(container -> {
+            return generator.apply(containerHolder(container));
+        }).mapToLong(d -> d.toInstant().toEpochMilli()).average().getAsDouble();
+        return Instant.ofEpochMilli(Math.round(average)).atZone(ZoneId.systemDefault()).toOffsetDateTime();
     }
 
     public Boolean contains(Collection<Container> containers, Container object) {
