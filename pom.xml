@@ -51,7 +51,7 @@
 
         <judo-dao-api-version>1.0.2.20201019_175250_82201ef_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.2.20200709_172739_726a3b9_develop</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.0.20201030_155810_ac4d4f8_develop</judo-meta-asm-version>
+        <judo-meta-asm-version>1.1.0.20201106_190250_00d6b74_develop</judo-meta-asm-version>
     </properties>
 
     <url>http://github.com/${project-repositoryId}</url>
