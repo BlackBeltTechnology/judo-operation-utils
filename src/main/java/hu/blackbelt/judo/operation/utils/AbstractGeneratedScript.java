@@ -447,11 +447,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected void deleteElement(Container container) {
-        if (isMapped(container.clazz)) {
-            dao.delete(container.clazz, container.getId());
+        if (container != null) {
+            if (isMapped(container.clazz)) {
+                dao.delete(container.clazz, container.getId());
+            }
+            deleteContainer(container);
+            write();
         }
-        deleteContainer(container);
-        write();
     }
 
     protected Collection<Container> containersForAll(String namespace, String name) {
@@ -468,21 +470,22 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected void updateAttribute(Container container, String attributeName, Object assignableObject) {
         Payload instance;
-        if (isMapped(container.clazz)) {
-            instance = (Payload) dao.getByIdentifier(container.clazz, container.getId()).get();
-        } else {
-            instance = container.getPayload();
-        }
-        instance.put(attributeName, assignableObject);
-        if (isMapped(container.clazz)) {
-            if (isMappedAttribute(container.clazz, attributeName)) {
-                container.updatePayload(dao.update(container.clazz, instance));
+        if (container != null) {
+            if (isMapped(container.clazz)) {
+                instance = (Payload) dao.getByIdentifier(container.clazz, container.getId()).get();
             } else {
-                container.updatePayload(instance);
+                instance = container.getPayload();
             }
+            instance.put(attributeName, assignableObject);
+            if (isMapped(container.clazz)) {
+                if (isMappedAttribute(container.clazz, attributeName)) {
+                    container.updatePayload(dao.update(container.clazz, instance));
+                } else {
+                    container.updatePayload(instance);
+                }
+            }
+            write();
         }
-        write();
-
     }
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
@@ -495,23 +498,28 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Set<Container> containersFromNavigation(Container container, String referenceName) {
         Set<Container> result = new LinkedHashSet<>();
-        EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
-        List<Payload> payloads;
-        if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
-            payloads = dao.getNavigationResultAt(container.getId(), ref);
-        } else {
-            payloads = container.getPayload().containsKey(referenceName) ?
-                    new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
-                    new ArrayList<>();
-        }
-        for (Payload payload : payloads) {
-            result.add(createContainer(ref.getEReferenceType(), payload));
+        if (container != null) {
+            EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
+            List<Payload> payloads;
+            if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
+                payloads = dao.getNavigationResultAt(container.getId(), ref);
+            } else {
+                payloads = container.getPayload().containsKey(referenceName) ?
+                        new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
+                        new ArrayList<>();
+            }
+            for (Payload payload : payloads) {
+                result.add(createContainer(ref.getEReferenceType(), payload));
+            }
         }
         return result;
     }
 
     protected Container spawnContainer(EClass clazz, Container original) {
         UUID mappedId = original.getMappedId();
+        if (mappedId == null) {
+            throw new IllegalArgumentException("Entity id is null");
+        }
         Optional payloadByIdentifier = dao.getByIdentifier(clazz, mappedId);
         Container container;
         if (payloadByIdentifier.isPresent()) {
