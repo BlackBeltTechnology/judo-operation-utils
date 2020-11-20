@@ -5,6 +5,7 @@ import hu.blackbelt.judo.dao.api.IdentifierProvider;
 import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.dispatcher.api.JudoPrincipal;
+import hu.blackbelt.judo.dispatcher.api.VariableResolver;
 import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.*;
@@ -12,7 +13,6 @@ import org.eclipse.emf.ecore.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
 
@@ -64,6 +64,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Dispatcher dispatcher;
     protected IdentifierProvider<UUID> idProvider;
     protected AsmModel asmModel;
+    protected VariableResolver variableResolver;
 
     protected AsmUtils asmUtils;
 
@@ -89,6 +90,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public void setAsmModel(AsmModel asmModel) {
         this.asmModel = asmModel;
         this.asmUtils = new AsmUtils(asmModel.getResourceSet());
+    }
+
+    public void setVariableResolver(VariableResolver variableResolver) {
+        this.variableResolver = variableResolver;
     }
 
     protected String getFqName(String namespace, String name) {
@@ -558,9 +563,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
+    protected EClassifier resolveClassifier(String namespace, String name) {
+        String enumFqName = replaceSeparator(getFqName(namespace, name));
+        return asmUtils.resolve(enumFqName).orElseThrow(() -> new IllegalArgumentException("Unknown type: " + enumFqName));
+    }
+
     protected Integer getEnumOrdinal(String enumNamespace, String enumName, String enumValue) {
-        String enumFqName = replaceSeparator(getFqName(enumNamespace, enumName));
-        EEnum eEnum = (EEnum) asmUtils.resolve(enumFqName).get();
+        EEnum eEnum = (EEnum) resolveClassifier(enumNamespace, enumName);
         return eEnum.getEEnumLiteral(enumValue).getValue();
     }
 

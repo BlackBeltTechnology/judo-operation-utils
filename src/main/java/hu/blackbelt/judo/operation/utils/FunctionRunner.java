@@ -6,8 +6,7 @@ import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
-import org.eclipse.emf.ecore.EClass;
-import org.eclipse.emf.ecore.EOperation;
+import org.eclipse.emf.ecore.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -182,7 +181,7 @@ public class FunctionRunner {
         return applySorting(containers.stream().map(FunctionRunner::containerHolder).collect(Collectors.toList()), orderByList);
     }
 
-    public <T extends Comparable> Container head(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+    public <T extends Comparable> Container head(Collection<Container> collection, SortOrderBy<T>... orderByList) {
         if (collection == null || collection.isEmpty()) {
             return null;
         } else {
@@ -196,7 +195,7 @@ public class FunctionRunner {
         }
     }
 
-    public <T extends Comparable> Container tail(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+    public <T extends Comparable> Container tail(Collection<Container> collection, SortOrderBy<T>... orderByList) {
         if (collection == null || collection.isEmpty()) {
             return null;
         } else {
@@ -273,7 +272,7 @@ public class FunctionRunner {
                 });
     }
 
-    public <T extends Comparable> Collection<Container> heads(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+    public <T extends Comparable> Collection<Container> heads(Collection<Container> collection, SortOrderBy<T>... orderByList) {
         if (collection == null || collection.isEmpty()) {
             return null;
         } else {
@@ -281,7 +280,7 @@ public class FunctionRunner {
         }
     }
 
-    public <T extends Comparable> Collection<Container> tails(Collection<Container> collection,  SortOrderBy<T>... orderByList) {
+    public <T extends Comparable> Collection<Container> tails(Collection<Container> collection, SortOrderBy<T>... orderByList) {
         if (collection == null || collection.isEmpty()) {
             return null;
         } else {
@@ -323,8 +322,38 @@ public class FunctionRunner {
         return result;
     }
 
-    public boolean  isCurrentActor(EClass actorType) {
+    public boolean isCurrentActor(EClass actorType) {
         return script.principal != null && AsmUtils.getClassifierFQName(actorType).equals(script.principal.getClient());
+    }
+
+    public Object getVariable(String typeNamespace, String typeName, String categoryName, String variableName) {
+        Object result = null;
+        EClassifier eClassifier = script.resolveClassifier(typeNamespace, typeName);
+        if (eClassifier instanceof EDataType) {
+            EDataType dataType = (EDataType) eClassifier;
+            String resolvedString = script.variableResolver.resolve(String.class, categoryName, variableName);
+            if (resolvedString != null) {
+                if (AsmUtils.isInteger(dataType)) {
+                    result = new BigInteger(resolvedString);
+                } else if (AsmUtils.isBoolean(dataType)) {
+                    result = Boolean.valueOf(resolvedString);
+                } else if (AsmUtils.isTimestamp(dataType)) {
+                    result = OffsetDateTime.parse(resolvedString);
+                } else if (AsmUtils.isDate(dataType)) {
+                    result = LocalDate.parse(resolvedString);
+                } else if (AsmUtils.isDecimal(dataType)) {
+                    result = new BigDecimal(resolvedString);
+                } else if (AsmUtils.isEnumeration(dataType)) {
+                    EEnum eEnum = (EEnum) dataType;
+                    result = resolvedString != null ? eEnum.getEEnumLiteral(resolvedString).getValue() : null;
+                } else {
+                    result = resolvedString;
+                }
+            }
+        } else {
+            throw new IllegalArgumentException(String.format("Environment variable %s is not valid for type %s", String.format("%s#%s", categoryName, variableName), AsmUtils.getClassifierFQName(eClassifier)));
+        }
+        return result;
     }
 
     private boolean isGetPrincipalOperation(EOperation eOperation) {
