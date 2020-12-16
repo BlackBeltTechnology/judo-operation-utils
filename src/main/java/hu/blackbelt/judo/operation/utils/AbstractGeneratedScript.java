@@ -477,7 +477,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         Payload instance;
         if (container != null) {
             if (isMapped(container.clazz)) {
-                instance = (Payload) dao.getByIdentifier(container.clazz, container.getId()).get();
+                instance = dao.getByIdentifier(container.clazz, container.getId()).get();
             } else {
                 instance = container.getPayload();
             }
@@ -571,6 +571,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Integer getEnumOrdinal(String enumNamespace, String enumName, String enumValue) {
         EEnum eEnum = (EEnum) resolveClassifier(enumNamespace, enumName);
         return eEnum.getEEnumLiteral(enumValue).getValue();
+    }
+
+    protected Optional<EClass> getClass(String classNamespace, String className) {
+        String typeFqName = replaceSeparator(getFqName(classNamespace, className));
+        return asmUtils.getClassByFQName(typeFqName);
+    }
+
+    protected Optional<Integer> getScale(EClass clazz, String attributeName) {
+        return clazz.getEAttributes().stream().filter(attr -> attr.getName().equals(attributeName)).findAny()
+                .flatMap(attribute -> AsmUtils.getExtensionAnnotationCustomValue(attribute, "constraints", "scale", false).map(Integer::valueOf));
     }
 
     protected Payload getStaticData(String namespace, String name, String attributeName) {
