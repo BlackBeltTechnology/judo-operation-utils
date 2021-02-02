@@ -136,6 +136,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createMutableContainer(Container container) {
+        if (container == null) {
+            return null;
+        }
         Payload newPayload = Payload.asPayload(container.payload);
         if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
             newPayload.put(IDENTIFIER, newPayload.remove(MUTABLE_IDENTIFIER));
@@ -157,6 +160,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createImmutableContainer(Container container) {
+        if (container == null) {
+            return null;
+        }
         Payload newPayload = Payload.asPayload(container.refresh().payload);
         return createImmutableContainer(container.clazz, newPayload);
     }
@@ -186,6 +192,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 result = createOrReturnMappedContainer(clazz, payload);
             } else {
                 result = createUnmappedOrImmutableContainer(clazz, payload);
+                if (result.getPayload().containsKey(MUTABLE_IDENTIFIER)) {
+                    result.immutable = true;
+                }
             }
         }
         return result;
