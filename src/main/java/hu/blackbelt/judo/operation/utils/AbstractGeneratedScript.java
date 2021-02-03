@@ -144,8 +144,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             newPayload.put(IDENTIFIER, newPayload.remove(MUTABLE_IDENTIFIER));
             newPayload.remove(UNMAPPEDID);
         }
+        if (!newPayload.containsKey(IDENTIFIER) && isMapped(container.clazz)) {
+            newPayload = dao.create(container.clazz, container.payload);
+        }
         Container refreshedNewContainer = new Container(container.clazz, newPayload).refresh();
-        Container result = createContainer(container.clazz, refreshedNewContainer.getPayload());
+        Container result = createContainer(container.clazz, refreshedNewContainer.getPayload(), true);
         result.deleted = refreshedNewContainer.deleted;
         return result;
     }
@@ -184,14 +187,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createContainer(EClass clazz, Payload payload) {
+        return createContainer(clazz, payload, false);
+    }
+
+    protected Container createContainer(EClass clazz, Payload payload, boolean daoCreate) {
         Container result;
         if (payload == null) {
             result = new Container();
         } else {
             if (payload.containsKey(IDENTIFIER)) {
-                result = createOrReturnMappedContainer(clazz, payload);
+                result = createOrReturnMappedContainer(clazz, payload, false);
+            } else if (daoCreate && isMapped(clazz)) {
+                Payload createdPayload = dao.create(clazz, payload);
+                result = createOrReturnMappedContainer(clazz, createdPayload, true);
             } else {
-                result = createUnmappedOrImmutableContainer(clazz, payload);
+                result = createUnmappedOrImmutableContainer(clazz, payload, daoCreate);
                 if (result.getPayload().containsKey(MUTABLE_IDENTIFIER)) {
                     result.immutable = true;
                 }
@@ -200,7 +210,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return result;
     }
 
-    private Container createUnmappedOrImmutableContainer(EClass clazz, Payload payload) {
+
+    private Container createUnmappedOrImmutableContainer(EClass clazz, Payload payload, boolean daoCreate) {
         Payload newPayload;
         if (!isMapped(clazz)) {
             newPayload = dao.getStaticFeatures(clazz);
@@ -229,6 +240,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             } else {
                 payloadsToProcess = Collections.emptySet();
             }
+            Map<Payload, Payload> replacedPayloads = new HashMap<>();
             payloadsToProcess.forEach(p -> {
                 if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
                     if (p.containsKey(IDENTIFIER)) {
@@ -237,14 +249,30 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 }
                 String toType = p.getAs(String.class, TO_TYPE);
                 EClass toClass;
+                Optional<EReference> eReference = clazz.getEAllReferences().stream().filter(ref -> ref.getName().equals(entry.getKey())).findAny();
                 if (toType == null) {
-                    toClass = clazz.getEAllReferences().stream().filter(ref -> ref.getName().equals(entry.getKey())).findAny().map(ref -> ref.getEReferenceType()).orElse(null);
+                    toClass = eReference.map(ref -> ref.getEReferenceType()).orElse(null);
                     p.put(TO_TYPE, AsmUtils.getClassifierFQName(toClass));
                 } else {
                     toClass = asmUtils.getClassByFQName(toType).orElse(null);
                 }
-                createContainer(toClass, p);
+                Container createdContainer = createContainer(toClass, p, daoCreate && eReference.map(EReference::isContainment).orElse(false));
+                if (daoCreate) {
+                    if (entry.getValue() instanceof Collection) {
+                        replacedPayloads.put(p, createdContainer.payload);
+                    } else {
+                        entry.setValue(createdContainer.payload);
+                    }
+                }
             });
+            if (!replacedPayloads.isEmpty()) {
+                Collection<Payload> storedPayloads = new ArrayList<>(newPayload.getAsCollectionPayload(entry.getKey()));
+                for (Map.Entry<Payload, Payload> replacedPayload : replacedPayloads.entrySet()) {
+                     storedPayloads.remove(replacedPayload.getKey());
+                     storedPayloads.add(replacedPayload.getValue());
+                }
+                entry.setValue(storedPayloads);
+            }
         }
         return result;
     }
@@ -252,7 +280,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     /*
     Given a payload for a mapped transfer object it either creates a container for it or returns the one already managed.
      */
-    private Container createOrReturnMappedContainer(EClass clazz, Payload payload) {
+    private Container createOrReturnMappedContainer(EClass clazz, Payload payload, boolean daoCreate) {
         Container result;
         String className = AsmUtils.getClassifierFQName(clazz);
         UUID id = (UUID) payload.get(IDENTIFIER);
@@ -601,7 +629,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Container getStaticDataContainer(String namespace, String name) {
         String typeFqName = replaceSeparator(getFqName(namespace, name));
         EClass eClass = asmUtils.getClassByFQName(typeFqName).get();
-        return createUnmappedOrImmutableContainer(eClass, Payload.empty());
+        return createUnmappedOrImmutableContainer(eClass, Payload.empty(), false);
     }
 
     protected boolean isContainment(EReference reference) {
