@@ -73,6 +73,35 @@ public class FunctionRunner {
         return text.matches(pattern);
     }
 
+    public Boolean like(String text, String pattern, boolean caseInsensitive) {
+        if (text == null || pattern == null) {
+            return null;
+        }
+        String regex = quote(pattern).replace("_", ".").replace("%", ".*?");
+        Pattern p = Pattern.compile(regex, caseInsensitive ? Pattern.CASE_INSENSITIVE | Pattern.DOTALL : Pattern.DOTALL);
+        return p.matcher(text).matches();
+    }
+
+    private static String quote(String s) {
+        if (s == null) {
+            throw new IllegalArgumentException("String cannot be null");
+        }
+
+        int len = s.length();
+        if (len == 0) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder(len * 2);
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+            if ("[](){}.*+?$^|#\\".indexOf(c) != -1) {
+                sb.append("\\");
+            }
+            sb.append(c);
+        }
+        return sb.toString();
+    }
 
     public String replace(String text, String pattern, String replacement) {
         if (text == null) {
