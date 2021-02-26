@@ -627,4 +627,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected abstract void doApply(Payload exchange, Holder<Payload> outputHolder);
 
+    protected <S, T> T coerce(S sourceValue, String targetClassName) {
+        return dispatcher.coerce(sourceValue, targetClassName);
+    }
+
+    protected <S, T> T coerce(S sourceValue, Class<T> targetClass) {
+        return dispatcher.coerce(sourceValue, targetClass);
+    }
 }
