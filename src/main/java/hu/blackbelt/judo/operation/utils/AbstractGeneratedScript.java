@@ -125,13 +125,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 .isPresent();
     }
 
+    private Object lockContainers = new Object();
     protected Map<UUID, Map<String, Set<Container>>> containers = new HashMap<>();
     protected Map<UUID, Container> unmappeds = new HashMap<>();
 
     protected void deleteContainer(Container container) {
-        if (container.getId() != null) {
-            containers.get(container.getId()).values().forEach(set -> set.forEach(Container::delete));
-            containers.remove(container.getId());
+        synchronized (lockContainers) {
+            if (container.getId() != null) {
+                containers.get(container.getId()).values().forEach(set -> set.forEach(Container::delete));
+                containers.remove(container.getId());
+            }
         }
     }
 
@@ -201,98 +204,104 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     private Container createUnmappedOrImmutableContainer(EClass clazz, Payload payload) {
-        Payload newPayload;
-        if (!isMapped(clazz)) {
-            newPayload = dao.getStaticFeatures(clazz);
-            for (String key : payload.keySet()) {
-                newPayload.put(key, payload.get(key));
-            }
-        } else {
-            newPayload = payload;
-        }
-        Container result;
-        UUID unmappedId;
-        if (!newPayload.containsKey(UNMAPPEDID)) {
-            unmappedId = UUID.randomUUID();
-            newPayload.put(UNMAPPEDID, unmappedId);
-        } else {
-            unmappedId = newPayload.getAs(UUID.class, UNMAPPEDID);
-        }
-        result = new Container(clazz, newPayload);
-        unmappeds.put(unmappedId, result);
-        for (Map.Entry<String, Object> entry : newPayload.entrySet()) {
-            Collection<Payload> payloadsToProcess;
-            if (entry.getValue() instanceof Payload) {
-                payloadsToProcess = Collections.singleton((Payload) entry.getValue());
-            } else if (entry.getValue() instanceof Collection) {
-                payloadsToProcess = newPayload.getAsCollectionPayload(entry.getKey());
+        synchronized (lockContainers) {
+            Payload newPayload;
+            if (!isMapped(clazz)) {
+                newPayload = dao.getStaticFeatures(clazz);
+                for (String key : payload.keySet()) {
+                    newPayload.put(key, payload.get(key));
+                }
             } else {
-                payloadsToProcess = Collections.emptySet();
+                newPayload = payload;
             }
-            payloadsToProcess.forEach(p -> {
-                if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
-                    if (p.containsKey(IDENTIFIER)) {
-                        p.put(MUTABLE_IDENTIFIER, p.remove(IDENTIFIER));
-                    }
-                }
-                String toType = p.getAs(String.class, TO_TYPE);
-                EClass toClass;
-                if (toType == null) {
-                    toClass = clazz.getEAllReferences().stream().filter(ref -> ref.getName().equals(entry.getKey())).findAny().map(ref -> ref.getEReferenceType()).orElse(null);
-                    p.put(TO_TYPE, AsmUtils.getClassifierFQName(toClass));
+            Container result;
+            UUID unmappedId;
+            if (!newPayload.containsKey(UNMAPPEDID)) {
+                unmappedId = UUID.randomUUID();
+                newPayload.put(UNMAPPEDID, unmappedId);
+            } else {
+                unmappedId = newPayload.getAs(UUID.class, UNMAPPEDID);
+            }
+            result = new Container(clazz, newPayload);
+            unmappeds.put(unmappedId, result);
+            for (Map.Entry<String, Object> entry : newPayload.entrySet()) {
+                Collection<Payload> payloadsToProcess;
+                if (entry.getValue() instanceof Payload) {
+                    payloadsToProcess = Collections.singleton((Payload) entry.getValue());
+                } else if (entry.getValue() instanceof Collection) {
+                    payloadsToProcess = newPayload.getAsCollectionPayload(entry.getKey());
                 } else {
-                    toClass = asmUtils.getClassByFQName(toType).orElse(null);
+                    payloadsToProcess = Collections.emptySet();
                 }
-                createContainer(toClass, p);
-            });
+                payloadsToProcess.forEach(p -> {
+                    if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
+                        if (p.containsKey(IDENTIFIER)) {
+                            p.put(MUTABLE_IDENTIFIER, p.remove(IDENTIFIER));
+                        }
+                    }
+                    String toType = p.getAs(String.class, TO_TYPE);
+                    EClass toClass;
+                    if (toType == null) {
+                        toClass = clazz.getEAllReferences().stream().filter(ref -> ref.getName().equals(entry.getKey())).findAny().map(ref -> ref.getEReferenceType()).orElse(null);
+                        p.put(TO_TYPE, AsmUtils.getClassifierFQName(toClass));
+                    } else {
+                        toClass = asmUtils.getClassByFQName(toType).orElse(null);
+                    }
+                    createContainer(toClass, p);
+                });
+            }
+            return result;
         }
-        return result;
     }
 
     /*
     Given a payload for a mapped transfer object it either creates a container for it or returns the one already managed.
      */
     private Container createOrReturnMappedContainer(EClass clazz, Payload payload) {
-        Container result;
-        String className = AsmUtils.getClassifierFQName(clazz);
-        UUID id = (UUID) payload.get(IDENTIFIER);
-        Map<String, Set<Container>> containerMap = containers.computeIfAbsent(id, k -> new HashMap<>());
-        if (containerMap.containsKey(className)) {
-            Set<Container> existingContainers = containerMap.get(className);
-            existingContainers.forEach(c -> c.updatePayload(payload));
-            Optional<Container> optionalResult = existingContainers.stream().filter(c -> payload.containsKey(TO_IDENTIFIER) && payload.getAs(UUID.class, TO_IDENTIFIER).equals(c.payload.getAs(UUID.class, TO_IDENTIFIER))).findAny();
-            if (!optionalResult.isPresent()) {
-                result = new Container(clazz, payload);
-                existingContainers.add(result);
+        synchronized (lockContainers) {
+            Container result;
+            String className = AsmUtils.getClassifierFQName(clazz);
+            UUID id = (UUID) payload.get(IDENTIFIER);
+            Map<String, Set<Container>> containerMap = containers.computeIfAbsent(id, k -> new HashMap<>());
+            if (containerMap.containsKey(className)) {
+                Set<Container> existingContainers = containerMap.get(className);
+                existingContainers.forEach(c -> c.updatePayload(payload));
+                Optional<Container> optionalResult = existingContainers.stream().filter(c -> payload.containsKey(TO_IDENTIFIER) && payload.getAs(UUID.class, TO_IDENTIFIER).equals(c.payload.getAs(UUID.class, TO_IDENTIFIER))).findAny();
+                if (!optionalResult.isPresent()) {
+                    result = new Container(clazz, payload);
+                    existingContainers.add(result);
+                } else {
+                    result = optionalResult.get();
+                }
             } else {
-                result = optionalResult.get();
+                payload.put(TO_IDENTIFIER, UUID.randomUUID());
+                payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
+                result = new Container(clazz, payload);
+                Set<Container> existingContainers = containerMap.computeIfAbsent(className, k -> new LinkedHashSet<>());
+                existingContainers.add(result);
+                containerMap.put(className, existingContainers);
             }
-        } else {
-            payload.put(TO_IDENTIFIER, UUID.randomUUID());
-            payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
-            result = new Container(clazz, payload);
-            Set<Container> existingContainers = containerMap.computeIfAbsent(className, k -> new LinkedHashSet<>());
-            existingContainers.add(result);
-            containerMap.put(className, existingContainers);
+            return result;
         }
-        return result;
     }
 
     public Optional<? extends Collection<Container>> findContainers(Payload payload) {
-        log.debug("Finding container " + payload);
-        if (payload.containsKey(UNMAPPEDID)) {
-            if (unmappeds.containsKey(payload.getAs(UUID.class, UNMAPPEDID))) {
-                return Optional.of(Collections.singleton(unmappeds.get(payload.getAs(UUID.class, UNMAPPEDID))));
+        synchronized (lockContainers) {
+            log.debug("Finding container " + payload);
+            if (payload.containsKey(UNMAPPEDID)) {
+                if (unmappeds.containsKey(payload.getAs(UUID.class, UNMAPPEDID))) {
+                    return Optional.of(Collections.singleton(unmappeds.get(payload.getAs(UUID.class, UNMAPPEDID))));
+                }
+            } else if (payload.containsKey(IDENTIFIER)) {
+                Map<String, Set<Container>> map = containers.get(payload.getAs(UUID.class, IDENTIFIER));
+                if (map != null) {
+                    return Optional.of(map.values().stream().flatMap(Collection::stream).collect(Collectors.toCollection(LinkedHashSet::new)));
+                } else {
+                    return Optional.empty();
+                }
             }
-        } else if (payload.containsKey(IDENTIFIER)) {
-            Map<String, Set<Container>> map = containers.get(payload.getAs(UUID.class, IDENTIFIER));
-            if (map != null) {
-                return Optional.of(map.values().stream().flatMap(Collection::stream).collect(Collectors.toCollection(LinkedHashSet::new)));
-            } else {
-                return Optional.empty();
-            }
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     public class Container {
