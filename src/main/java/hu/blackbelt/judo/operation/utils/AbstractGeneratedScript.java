@@ -502,7 +502,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             instance.put(attributeName, assignableObject);
             if (isMapped(container.clazz)) {
                 if (isMappedAttribute(container.clazz, attributeName)) {
-                    container.updatePayload(dao.update(container.clazz, instance));
+                    container.updatePayload(dao.update(container.clazz, instance, null));
                 } else {
                     container.updatePayload(instance);
                 }
@@ -626,7 +626,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         List<UUID> currentIds = currentContent.stream().map(payload -> payload.getAs(UUID.class, IDENTIFIER)).collect(Collectors.toList());
         payloads.stream().filter(payload -> !currentIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach( payload -> {
             if (!payload.containsKey(IDENTIFIER)) {
-                dao.createNavigationInstanceAt(target.getId(), reference, payload);
+                dao.createNavigationInstanceAt(target.getId(), reference, payload, null);
             } else {
                 dao.addReferences(reference, target.getId(), Collections.singleton(payload.getAs(UUID.class, IDENTIFIER)));
             }
