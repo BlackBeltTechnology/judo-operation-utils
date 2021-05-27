@@ -49,7 +49,7 @@
 
         <log4j.configuration>log4j.properties</log4j.configuration>
 
-        <judo-dao-api-version>1.0.2.20210526_142237_614cb97_feature_JNG_2669_add_query_customizer_to_create_and_update</judo-dao-api-version>
+        <judo-dao-api-version>1.0.2.20210527_134635_7144d73_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.2.20210302_135850_a9b5c54_develop</judo-dispatcher-api-version>
         <judo-meta-asm-version>1.1.0.20210518_092555_660b957_develop</judo-meta-asm-version>
     </properties>
