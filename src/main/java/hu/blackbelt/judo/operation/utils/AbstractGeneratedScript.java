@@ -643,4 +643,5 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected <S, T> T coerce(S sourceValue, Class<T> targetClass) {
         return dispatcher.coerce(sourceValue, targetClass);
     }
+
 }
