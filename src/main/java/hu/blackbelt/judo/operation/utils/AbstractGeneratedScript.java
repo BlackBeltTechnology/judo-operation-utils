@@ -537,7 +537,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
         return result;
     }
-
+    
+    protected Collection<Container> spawnContainers(EClass clazz, Collection<Container> originals) {
+    	return originals.stream().map(c -> spawnContainer(clazz, c)).collect(Collectors.toList());
+    }
+    
     protected Container spawnContainer(EClass clazz, Container original) {
         UUID mappedId = original.getMappedId();
         if (mappedId == null) {
