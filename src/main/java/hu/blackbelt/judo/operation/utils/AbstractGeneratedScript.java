@@ -205,36 +205,29 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     private Container createUnmappedOrImmutableContainer(EClass clazz, Payload payload) {
         synchronized (lockContainers) {
-            Payload newPayload;
             if (!isMapped(clazz)) {
-                newPayload = dao.getStaticFeatures(clazz);
-                for (String key : payload.keySet()) {
-                    newPayload.put(key, payload.get(key));
-                }
-            } else {
-                newPayload = payload;
+                payload.putAll(dao.getStaticFeatures(clazz));
             }
-            Container result;
             UUID unmappedId;
-            if (!newPayload.containsKey(UNMAPPEDID)) {
+            if (!payload.containsKey(UNMAPPEDID)) {
                 unmappedId = UUID.randomUUID();
-                newPayload.put(UNMAPPEDID, unmappedId);
+                payload.put(UNMAPPEDID, unmappedId);
             } else {
-                unmappedId = newPayload.getAs(UUID.class, UNMAPPEDID);
+                unmappedId = payload.getAs(UUID.class, UNMAPPEDID);
             }
-            result = new Container(clazz, newPayload);
+            Container result = new Container(clazz, payload);
             unmappeds.put(unmappedId, result);
-            for (Map.Entry<String, Object> entry : newPayload.entrySet()) {
+            for (Map.Entry<String, Object> entry : payload.entrySet()) {
                 Collection<Payload> payloadsToProcess;
                 if (entry.getValue() instanceof Payload) {
                     payloadsToProcess = Collections.singleton((Payload) entry.getValue());
                 } else if (entry.getValue() instanceof Collection) {
-                    payloadsToProcess = newPayload.getAsCollectionPayload(entry.getKey());
+                    payloadsToProcess = payload.getAsCollectionPayload(entry.getKey());
                 } else {
                     payloadsToProcess = Collections.emptySet();
                 }
                 payloadsToProcess.forEach(p -> {
-                    if (newPayload.containsKey(MUTABLE_IDENTIFIER)) {
+                    if (payload.containsKey(MUTABLE_IDENTIFIER)) {
                         if (p.containsKey(IDENTIFIER)) {
                             p.put(MUTABLE_IDENTIFIER, p.remove(IDENTIFIER));
                         }
