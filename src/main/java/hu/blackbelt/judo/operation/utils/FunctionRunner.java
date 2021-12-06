@@ -10,10 +10,7 @@ import org.eclipse.emf.ecore.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -172,6 +169,13 @@ public class FunctionRunner {
             return generator.apply(containerHolder(container));
         }).mapToLong(d -> d.toInstant().toEpochMilli()).average().getAsDouble();
         return Instant.ofEpochMilli(Math.round(average)).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+    }
+
+    public LocalTime avgTime(Collection<Container> containers, Function<Holder<Container>, LocalTime> generator) {
+        double average = containers.stream().map(container -> {
+            return generator.apply(containerHolder(container));
+        }).mapToLong(d -> d.toNanoOfDay()).average().getAsDouble();
+        return LocalTime.ofNanoOfDay(Math.round(average));
     }
 
     public Boolean contains(Collection<Container> containers, Container object) {
@@ -356,28 +360,31 @@ public class FunctionRunner {
     }
 
     public Object getVariable(String typeNamespace, String typeName, String categoryName, String variableName) {
-        Object result = null;
+        Object result;
         EClassifier eClassifier = script.resolveClassifier(typeNamespace, typeName);
         if (eClassifier instanceof EDataType) {
             EDataType dataType = (EDataType) eClassifier;
-            String resolvedString = script.variableResolver.resolve(String.class, categoryName, variableName);
-            if (resolvedString != null) {
-                if (AsmUtils.isInteger(dataType)) {
-                    result = new BigInteger(resolvedString);
-                } else if (AsmUtils.isBoolean(dataType)) {
-                    result = Boolean.valueOf(resolvedString);
-                } else if (AsmUtils.isTimestamp(dataType)) {
-                    result = OffsetDateTime.parse(resolvedString);
-                } else if (AsmUtils.isDate(dataType)) {
-                    result = LocalDate.parse(resolvedString);
-                } else if (AsmUtils.isDecimal(dataType)) {
-                    result = new BigDecimal(resolvedString);
-                } else if (AsmUtils.isEnumeration(dataType)) {
-                    EEnum eEnum = (EEnum) dataType;
-                    result = resolvedString != null ? eEnum.getEEnumLiteral(resolvedString).getValue() : null;
-                } else {
-                    result = resolvedString;
-                }
+
+            if (AsmUtils.isString(dataType)) {
+               result = script.variableResolver.resolve(String.class, categoryName, variableName);
+            } else if (AsmUtils.isInteger(dataType)) {
+                result = script.variableResolver.resolve(BigInteger.class, categoryName, variableName);
+            } else if (AsmUtils.isBoolean(dataType)) {
+                result = script.variableResolver.resolve(Boolean.class, categoryName, variableName);
+            } else if (AsmUtils.isTimestamp(dataType)) {
+                result = script.variableResolver.resolve(OffsetDateTime.class, categoryName, variableName);
+            } else if (AsmUtils.isTime(dataType)) {
+                result = script.variableResolver.resolve(LocalTime.class, categoryName, variableName);
+            } else if (AsmUtils.isDate(dataType)) {
+                result = script.variableResolver.resolve(LocalDate.class, categoryName, variableName);
+            } else if (AsmUtils.isDecimal(dataType)) {
+                result = script.variableResolver.resolve(BigDecimal.class, categoryName, variableName);
+            } else if (AsmUtils.isEnumeration(dataType)) {
+                EEnum eEnum = (EEnum) dataType;
+                String resolvedString = script.variableResolver.resolve(String.class, categoryName, variableName);
+                result = resolvedString != null ? eEnum.getEEnumLiteral(resolvedString).getValue() : null;
+            } else {
+                result = script.variableResolver.resolve(Object.class, categoryName, variableName);
             }
         } else {
             throw new IllegalArgumentException(String.format("Environment variable %s is not valid for type %s", String.format("%s#%s", categoryName, variableName), AsmUtils.getClassifierFQName(eClassifier)));
