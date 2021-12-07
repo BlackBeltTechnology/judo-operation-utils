@@ -54,7 +54,7 @@
 
         <judo-dao-api-version>1.0.2.20211104_152509_0c96c4e3_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.2.20211021_104251_84f05cf1_develop</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.0.20211117_100507_15fdc961_feature_JNG_1374_AddTimeDataType</judo-meta-asm-version>
+        <judo-meta-asm-version>1.1.0.20211206_195445_d0c1debd_develop</judo-meta-asm-version>
     </properties>
 
     <url>http://github.com/${project-repositoryId}</url>
