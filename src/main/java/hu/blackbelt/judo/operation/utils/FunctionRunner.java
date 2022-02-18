@@ -3,10 +3,10 @@ package hu.blackbelt.judo.operation.utils;
 import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
+import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 import org.eclipse.emf.ecore.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,12 +17,13 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.ENTITY_TYPE;
+import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 
 public class FunctionRunner {
     private final AbstractGeneratedScript script;
+
+    private static final Logger log = LoggerFactory.getLogger(AbstractGeneratedScript.class);
 
     public FunctionRunner(AbstractGeneratedScript script) {
         this.script = script;
@@ -108,9 +109,16 @@ public class FunctionRunner {
     }
 
     public Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return containers.stream().filter(container -> {
-            return predicate.test(containerHolder(container));
-        }).collect(Collectors.toSet());
+        return containers.stream()
+                .filter(container -> {
+                    try {
+                        return predicate.test(containerHolder(container));
+                    } catch (Exception e) { // possible undefined expression
+                        log.debug("Exception caught in filter operation", e);
+                        return false;
+                    }
+                })
+                .collect(Collectors.toSet());
     }
 
     public Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
