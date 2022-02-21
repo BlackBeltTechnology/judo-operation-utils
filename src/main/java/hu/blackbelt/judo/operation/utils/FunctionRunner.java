@@ -13,7 +13,6 @@ import java.math.BigInteger;
 import java.time.*;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -108,25 +107,18 @@ public class FunctionRunner {
         return text.replaceAll(Pattern.quote(pattern), replacement);
     }
 
-    public Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
+    public Collection<Container> filter(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
         return containers.stream()
-                .filter(container -> {
-                    try {
-                        return predicate.test(containerHolder(container));
-                    } catch (Exception e) { // possible undefined expression
-                        log.debug("Exception caught in filter operation", e);
-                        return false;
-                    }
-                })
+                .filter(container -> Objects.requireNonNullElse(condition.apply(containerHolder(container)), false))
                 .collect(Collectors.toSet());
     }
 
-    public Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return !filter(containers, predicate).isEmpty();
+    public Boolean exists(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
+        return !filter(containers, condition).isEmpty();
     }
 
-    public Boolean forAll(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return filter(containers, predicate).size() == containers.size();
+    public Boolean forAll(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
+        return filter(containers, condition).size() == containers.size();
     }
 
     public <T extends Comparable<T>> T max(Collection<Container> containers, Function<Holder<Container>, T> generator) {
