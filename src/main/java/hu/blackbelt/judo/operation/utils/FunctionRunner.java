@@ -5,8 +5,6 @@ import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 import org.eclipse.emf.ecore.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -21,8 +19,6 @@ import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 
 public class FunctionRunner {
     private final AbstractGeneratedScript script;
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractGeneratedScript.class);
 
     public FunctionRunner(AbstractGeneratedScript script) {
         this.script = script;
