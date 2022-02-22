@@ -3,9 +3,7 @@ package hu.blackbelt.judo.operation.utils;
 import hu.blackbelt.judo.dao.api.Payload;
 import hu.blackbelt.judo.dispatcher.api.Dispatcher;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Container;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.Holder;
-import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.SortOrderBy;
+import hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 import org.eclipse.emf.ecore.*;
 
 import java.math.BigDecimal;
@@ -13,13 +11,11 @@ import java.math.BigInteger;
 import java.time.*;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.ENTITY_TYPE;
+import static hu.blackbelt.judo.operation.utils.AbstractGeneratedScript.*;
 
 public class FunctionRunner {
     private final AbstractGeneratedScript script;
@@ -107,18 +103,18 @@ public class FunctionRunner {
         return text.replaceAll(Pattern.quote(pattern), replacement);
     }
 
-    public Collection<Container> filter(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return containers.stream().filter(container -> {
-            return predicate.test(containerHolder(container));
-        }).collect(Collectors.toSet());
+    public Collection<Container> filter(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
+        return containers.stream()
+                .filter(container -> Objects.requireNonNullElse(condition.apply(containerHolder(container)), false))
+                .collect(Collectors.toSet());
     }
 
-    public Boolean exists(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return !filter(containers, predicate).isEmpty();
+    public Boolean exists(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
+        return !filter(containers, condition).isEmpty();
     }
 
-    public Boolean forAll(Collection<Container> containers, Predicate<Holder<Container>> predicate) {
-        return filter(containers, predicate).size() == containers.size();
+    public Boolean forAll(Collection<Container> containers, Function<Holder<Container>, Boolean> condition) {
+        return filter(containers, condition).size() == containers.size();
     }
 
     public <T extends Comparable<T>> T max(Collection<Container> containers, Function<Holder<Container>, T> generator) {
