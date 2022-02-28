@@ -168,7 +168,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Collection<Container> createImmutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
-        if (containers == null || containers.isEmpty()) return result;
+        if (containers == null) return result;
         for (Container container : containers) {
             result.add(createImmutableContainer(container));
         }
@@ -177,7 +177,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Collection<Container> createMutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
-        if (containers == null || containers.isEmpty()) return result;
+        if (containers == null) return result;
         for (Container container : containers) {
             result.add(createMutableContainer(container));
         }
@@ -509,7 +509,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
         Set<Container> result = new LinkedHashSet<>();
-        if (containers == null || containers.isEmpty()) return result;
+        if (containers == null) return result;
         for (Container container : containers) {
             result.addAll(containersFromNavigation(container, referenceName));
         }
