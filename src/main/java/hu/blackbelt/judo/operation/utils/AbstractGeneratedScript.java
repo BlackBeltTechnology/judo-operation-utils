@@ -438,14 +438,17 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                             }
                         }
                     }
-                    removableKeys.stream()
-                            .filter(key -> payload.get(key) instanceof Collection)
-                            .map(payload::get)
-                            .forEach(c -> ((Collection) c).clear());
-                    removableKeys.stream()
-                            .filter(key -> !(payload.get(key) instanceof Collection))
-                            .collect(Collectors.toList())
-                            .forEach(payload.keySet()::remove);
+                    removableKeys.forEach(key -> {
+                        if (payload.get(key) instanceof Collection) {
+                            ((Collection) payload.get(key)).clear();
+                        } else {
+                            payload.keySet().remove(key);
+                        }
+                    });
+
+                    if (!isMapped(clazz)) {
+                        payload.putAll(dao.getStaticFeatures(clazz));
+                    }
                 }
             }
             return this;
