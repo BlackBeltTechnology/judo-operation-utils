@@ -441,8 +441,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                     removableKeys.forEach(key -> {
                         if (payload.get(key) instanceof Collection) {
                             ((Collection) payload.get(key)).clear();
-                        } else {
-                            payload.keySet().remove(key);
+                        } else if (key != null) {
+                            payload.remove(key);
                         }
                     });
 
