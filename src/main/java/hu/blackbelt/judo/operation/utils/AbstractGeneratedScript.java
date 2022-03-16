@@ -493,14 +493,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected void updateAttribute(Container container, String attributeName, Object assignableObject) {
         Payload instance;
         if (container != null) {
-            if (isMapped(container.clazz)) {
+            boolean mappedEClass = isMapped(container.clazz);
+            boolean mappedEAttribute = isMappedAttribute(container.clazz, attributeName);
+            if (mappedEClass && mappedEAttribute) {
                 instance = dao.getByIdentifier(container.clazz, container.getId()).get();
             } else {
                 instance = container.getPayload();
             }
             instance.put(attributeName, assignableObject);
-            if (isMapped(container.clazz)) {
-                if (isMappedAttribute(container.clazz, attributeName)) {
+            if (mappedEClass) {
+                if (mappedEAttribute) {
                     container.updatePayload(dao.update(container.clazz, instance, null));
                 } else {
                     container.updatePayload(instance);
@@ -537,11 +539,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
         return result;
     }
-    
+
     protected Collection<Container> spawnContainers(EClass clazz, Collection<Container> originals) {
     	return originals.stream().map(c -> spawnContainer(clazz, c)).collect(Collectors.toList());
     }
-    
+
     protected Container spawnContainer(EClass clazz, Container original) {
         UUID mappedId = original.getMappedId();
         if (mappedId == null) {
