@@ -33,18 +33,20 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public class Container {
         public final Payload payload;
         public EClass clazz;
-        public long lastRefresh = 0;
+        public long lastRefresh;
         public boolean deleted;
         public boolean immutable;
 
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
+            lastRefresh = System.currentTimeMillis();
         }
 
         public Container() {
             payload = null;
             clazz = null;
+            lastRefresh = System.currentTimeMillis();
         }
 
         public UUID getId() {
@@ -222,7 +224,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             this.descending = descending;
         }
     }
-    
+
     protected DAO<UUID> dao;
     protected Dispatcher dispatcher;
     protected IdentifierProvider<UUID> idProvider;
