@@ -190,12 +190,53 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return this;
         }
 
-        public Payload getPayload() {
-            if (deleted) {
-                return Payload.empty();
+        public Object containerPayloadGet(String key) { // used by generated script
+            if (deleted || oneIsNull(key, payload)) return null;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                return getPayload().get(key);
             } else {
-                return Objects.requireNonNullElse(refresh().payload, Payload.empty());
+                return payload.get(key);
             }
+        }
+
+        public void containerPayloadPut(String key, Object object) { // used by generated script
+            if (oneIsNull(key, payload)) return;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                getPayload().put(key, object);
+                write();
+            } else {
+                payload.put(key, object);
+            }
+        }
+
+        public void containerPayloadRemove(String key) { // used by generated script
+            if (deleted || oneIsNull(key, payload)) return;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                getPayload().remove(key);
+                write();
+            } else {
+                payload.remove(key);
+            }
+        }
+
+        public <T> T containerPayloadGetAs(Class<T> clazz, String key) { // used by generated script
+            if (deleted || oneIsNull(clazz, key, payload)) return null;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                return getPayload().getAs(clazz, key);
+            } else {
+                return payload.getAs(clazz, key);
+            }
+        }
+
+        private boolean oneIsNull(Object... nullables) {
+            if (nullables == null) return true;
+            return Arrays.stream(nullables).anyMatch(Objects::isNull);
+        }
+
+        public Payload getPayload() {
+            return deleted
+                    ? Payload.empty()
+                    : Objects.requireNonNullElse(refresh().payload, Payload.empty());
         }
     }
 
@@ -506,11 +547,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             if (mappedEClass) {
                 if (mappedEAttribute) {
                     container.updatePayload(dao.update(container.clazz, instance, null));
+                    write();
                 } else {
                     container.updatePayload(instance);
                 }
             }
-            write();
         }
     }
 
@@ -543,7 +584,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Collection<Container> spawnContainers(EClass clazz, Collection<Container> originals) {
-    	return originals.stream().map(c -> spawnContainer(clazz, c)).collect(Collectors.toList());
+        return originals.stream().map(c -> spawnContainer(clazz, c)).collect(Collectors.toList());
     }
 
     protected Container spawnContainer(EClass clazz, Container original) {
@@ -554,7 +595,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         Optional payloadByIdentifier = dao.getByIdentifier(clazz, mappedId);
         Container container;
         if (payloadByIdentifier.isPresent()) {
-             container = createContainer(clazz, (Payload) payloadByIdentifier.get());
+            container = createContainer(clazz, (Payload) payloadByIdentifier.get());
         } else {
             container = null;
         }
@@ -632,7 +673,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         currentContent.stream().filter(payload -> !addedIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach(
                 payload -> dao.deleteNavigationInstanceAt(target.getId(), reference, payload));
         List<UUID> currentIds = currentContent.stream().map(payload -> payload.getAs(UUID.class, IDENTIFIER)).collect(Collectors.toList());
-        payloads.stream().filter(payload -> !currentIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach( payload -> {
+        payloads.stream().filter(payload -> !currentIds.contains(payload.getAs(UUID.class, IDENTIFIER))).forEach(payload -> {
             if (!payload.containsKey(IDENTIFIER)) {
                 dao.createNavigationInstanceAt(target.getId(), reference, payload, null);
             } else {
