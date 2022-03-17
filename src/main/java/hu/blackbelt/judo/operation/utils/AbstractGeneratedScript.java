@@ -6,8 +6,10 @@ import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.*;
 
+import java.awt.Container;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
@@ -592,13 +594,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         if (mappedId == null) {
             throw new IllegalArgumentException("Entity id is null");
         }
-        Optional payloadByIdentifier = dao.getByIdentifier(clazz, mappedId);
-        Container container;
-        if (payloadByIdentifier.isPresent()) {
-            container = createContainer(clazz, (Payload) payloadByIdentifier.get());
-        } else {
-            container = null;
-        }
+        Container container = dao.getByIdentifier(clazz, mappedId)
+                .map(payload -> createContainer(clazz, payload))
+                .orElse(null);
         write();
         return container;
     }
@@ -658,12 +656,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Container getStaticDataContainer(String namespace, String name) {
         String typeFqName = replaceSeparator(getFqName(namespace, name));
-        EClass eClass = asmUtils.getClassByFQName(typeFqName).get();
+        EClass eClass = asmUtils.getClassByFQName(typeFqName)
+                .orElseThrow(() -> new NoSuchElementException(String.format("Class with fqname %s cannot be found", typeFqName)));
         return createUnmappedOrImmutableContainer(eClass, Payload.empty());
     }
 
     protected boolean isContainment(EReference reference) {
-        return asmUtils.getMappedReference(reference).map(EReference::isContainment).get();
+        return asmUtils.getMappedReference(reference)
+                .map(EReference::isContainment)
+                .orElseThrow(() -> new NoSuchElementException(
+                        String.format("Mapped reference of %s cannot be found", reference.getName())));
     }
 
     protected void assignNewEmbeddedCollection(Container target, EReference reference, Collection<Payload> payloads) {
