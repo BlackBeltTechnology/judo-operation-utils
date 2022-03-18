@@ -35,20 +35,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public class Container {
         public final Payload payload;
         public EClass clazz;
-        public long lastRefresh;
+        public long lastRefresh = 0;
         public boolean deleted;
         public boolean immutable;
 
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
-            lastRefresh = System.currentTimeMillis();
         }
 
         public Container() {
             payload = null;
             clazz = null;
-            lastRefresh = System.currentTimeMillis();
         }
 
         public UUID getId() {
