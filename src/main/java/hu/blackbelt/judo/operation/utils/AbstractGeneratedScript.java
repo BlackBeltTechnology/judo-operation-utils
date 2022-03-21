@@ -30,7 +30,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         functionRunner = new FunctionRunner(this);
     }
 
-    private static boolean oneIsNull(Object... nullables) {
+    private static boolean anyNull(Object... nullables) {
         if (nullables == null) return true;
         return Arrays.stream(nullables).anyMatch(Objects::isNull);
     }
@@ -464,7 +464,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public Object containerPayloadGet(String key) { // used by generated script
-            if (deleted || oneIsNull(key, payload)) return null;
+            if (deleted || anyNull(key, payload)) return null;
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 return getPayload().get(key);
             } else {
@@ -473,7 +473,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public void containerPayloadPut(String key, Object object) { // used by generated script
-            if (oneIsNull(key, payload)) return;
+            if (anyNull(key, payload)) return;
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 getPayload().put(key, object);
                 write();
@@ -483,7 +483,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public void containerPayloadRemove(String key) { // used by generated script
-            if (deleted || oneIsNull(key, payload)) return;
+            if (deleted || anyNull(key, payload)) return;
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 getPayload().remove(key);
                 write();
@@ -493,7 +493,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public <T> T containerPayloadGetAs(Class<T> clazz, String key) { // used by generated script
-            if (deleted || oneIsNull(clazz, key, payload)) return null;
+            if (deleted || anyNull(clazz, key, payload)) return null;
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 return getPayload().getAs(clazz, key);
             } else {
