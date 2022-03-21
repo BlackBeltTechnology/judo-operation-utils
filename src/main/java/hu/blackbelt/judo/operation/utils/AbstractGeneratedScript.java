@@ -33,18 +33,20 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public class Container {
         public final Payload payload;
         public final EClass clazz;
-        public long lastRefresh = 0;
+        public long lastRefresh;
         public boolean deleted;
         public boolean immutable;
 
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
+            lastRefresh = lastWrite + 1;
         }
 
         public Container() {
             payload = null;
             clazz = null;
+            lastRefresh = 0;
         }
 
         public UUID getId() {
@@ -234,16 +236,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return !deleted && payload != null && payload.containsKey(MUTABLE_IDENTIFIER);
         }
 
-        private boolean oneIsNull(Object... nullables) {
-            if (nullables == null) return true;
-            return Arrays.stream(nullables).anyMatch(Objects::isNull);
-        }
-
         public Payload getPayload() {
             return deleted
                     ? Payload.empty()
                     : Objects.requireNonNullElse(refresh().payload, Payload.empty());
         }
+    }
+
+    private static boolean oneIsNull(Object... nullables) {
+        if (nullables == null) return true;
+        return Arrays.stream(nullables).anyMatch(Objects::isNull);
     }
 
     public static class Holder<T> {
