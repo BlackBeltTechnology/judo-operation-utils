@@ -30,213 +30,6 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         functionRunner = new FunctionRunner(this);
     }
 
-    public class Container {
-        public final Payload payload;
-        public final EClass clazz;
-        public long lastRefresh = 0;
-        public boolean deleted;
-        public boolean immutable;
-
-        public Container(EClass clazz, Payload payload) {
-            this.clazz = clazz;
-            this.payload = payload;
-        }
-
-        public Container() {
-            payload = null;
-            clazz = null;
-        }
-
-        public UUID getId() {
-            UUID result = getMappedId();
-            if (result == null && payload != null) {
-                result = payload.getAs(UUID.class, MUTABLE_IDENTIFIER);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            boolean result = false;
-            if (obj instanceof Container) {
-                UUID thisId = getMappedId();
-                UUID otherId = ((Container) obj).getMappedId();
-                result = thisId != null && thisId.equals(otherId) || super.equals(obj);
-            }
-            return result;
-        }
-
-        public int hashCode() {
-            if (getMappedId() != null) {
-                return getMappedId().hashCode();
-            } else {
-                return super.hashCode();
-            }
-        }
-
-        public UUID getMappedId() {
-            if (payload == null) return null;
-            return payload.getAs(UUID.class, IDENTIFIER);
-        }
-
-        public void delete() {
-            deleted = true;
-        }
-
-        public void updatePayload(Payload newPayload) {
-            if (immutable) {
-                throw new IllegalStateException("Tried to refresh immutable container");
-            }
-            if (payload == null) {
-                log.debug("Payload cannot be updated because its value is null");
-                return;
-            }
-            if (clazz == null) {
-                log.debug("Payload cannot be updated because container's clazz is null");
-                return;
-            }
-            if (newPayload.isEmpty()) {
-                payload.clear();
-                return;
-            }
-            for (String key : newPayload.keySet()) {
-                payload.put(key, newPayload.get(key));
-            }
-            clazz.getEAllAttributes().stream()
-                    .map(ENamedElement::getName)
-                    .filter(n -> isMappedAttribute(clazz, n))
-                    .forEach(n -> {
-                        if (!newPayload.containsKey(n)) {
-                            payload.remove(n);
-                        }
-                    });
-            clazz.getEAllReferences().stream()
-                    .map(ENamedElement::getName)
-                    .filter(n -> isMappedReference(clazz, n))
-                    .forEach(n -> {
-                        if (!newPayload.containsKey(n)) {
-                            payload.remove(n);
-                        }
-                    });
-            lastRefresh = System.currentTimeMillis();
-            log.debug(String.format("Payload %s merged as %s", newPayload, payload));
-        }
-
-        public Container refresh() {
-            if (!immutable && lastRefresh <= lastWrite) {
-                lastRefresh = System.currentTimeMillis();
-                if (getMappedId() != null) {
-                    Payload newPayload = dao.getByIdentifier(clazz, getMappedId()).orElseGet(() -> {
-                        deleted = true;
-                        return Payload.empty();
-                    });
-                    updatePayload(newPayload);
-                } else if (payload != null) {
-                    Set<String> removableKeys = new LinkedHashSet<>();
-                    for (Map.Entry<String, Object> entry : payload.entrySet()) {
-                        if (entry.getValue() instanceof Payload) {
-                            Payload contentPayload = (Payload) entry.getValue();
-                            Optional<? extends Collection<Container>> optContainer = findContainers(contentPayload);
-                            if (optContainer.isPresent()) {
-                                optContainer.get().forEach(container -> {
-                                    container.refresh();
-                                    if (container.payload != null && container.payload.isEmpty()) {
-                                        removableKeys.add(entry.getKey());
-                                    }
-                                });
-                            } else {
-                                if (contentPayload.containsKey(UNMAPPEDID) || contentPayload.containsKey("__identifier")) {
-                                    removableKeys.add(entry.getKey());
-                                }
-                            }
-                        } else if (entry.getValue() instanceof Collection) {
-                            Collection contentCollection = new ArrayList((Collection) entry.getValue());
-                            List<Payload> removable = new ArrayList<>();
-                            for (Object elem : contentCollection) {
-                                if (elem instanceof Payload) {
-                                    Payload payloadElem = (Payload) elem;
-                                    Optional<? extends Collection<Container>> optContainer = findContainers(payloadElem);
-                                    if (optContainer.isPresent()) {
-                                        optContainer.get().forEach(container -> {
-                                            container.refresh();
-                                            if (container.payload != null && container.payload.isEmpty()) {
-                                                removable.add(payloadElem);
-                                            }
-                                        });
-                                    } else {
-                                        if (payloadElem.containsKey(UNMAPPEDID) || payloadElem.containsKey("__identifier")) {
-                                            removable.add(payloadElem);
-                                        }
-                                    }
-                                }
-                            }
-                            contentCollection.removeAll(removable);
-                            if (contentCollection.isEmpty()) {
-                                removableKeys.add(entry.getKey());
-                            }
-                        }
-                    }
-                    removableKeys.forEach(key -> {
-                        if (payload.get(key) instanceof Collection) {
-                            ((Collection) payload.get(key)).clear();
-                        } else if (key != null) {
-                            payload.remove(key);
-                        }
-                    });
-
-                    if (!isMapped(clazz)) {
-                        payload.putAll(dao.getStaticFeatures(clazz));
-                    }
-                }
-            }
-            return this;
-        }
-
-        public Object containerPayloadGet(String key) { // used by generated script
-            if (deleted || oneIsNull(key, payload)) return null;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                return getPayload().get(key);
-            } else {
-                return payload.get(key);
-            }
-        }
-
-        public void containerPayloadPut(String key, Object object) { // used by generated script
-            if (oneIsNull(key, payload)) return;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                getPayload().put(key, object);
-                write();
-            } else {
-                payload.put(key, object);
-            }
-        }
-
-        public void containerPayloadRemove(String key) { // used by generated script
-            if (deleted || oneIsNull(key, payload)) return;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                getPayload().remove(key);
-                write();
-            } else {
-                payload.remove(key);
-            }
-        }
-
-        public <T> T containerPayloadGetAs(Class<T> clazz, String key) { // used by generated script
-            if (deleted || oneIsNull(clazz, key, payload)) return null;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                return getPayload().getAs(clazz, key);
-            } else {
-                return payload.getAs(clazz, key);
-            }
-        }
-
-        public Payload getPayload() {
-            return deleted
-                    ? Payload.empty()
-                    : Objects.requireNonNullElse(refresh().payload, Payload.empty());
-        }
-    }
-
     private static boolean oneIsNull(Object... nullables) {
         if (nullables == null) return true;
         return Arrays.stream(nullables).anyMatch(Objects::isNull);
@@ -505,6 +298,213 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 }
             }
             return Optional.empty();
+        }
+    }
+
+    public class Container {
+        public final Payload payload;
+        public final EClass clazz;
+        public long lastRefresh = 0;
+        public boolean deleted;
+        public boolean immutable;
+
+        public Container(EClass clazz, Payload payload) {
+            this.clazz = clazz;
+            this.payload = payload;
+        }
+
+        public Container() {
+            payload = null;
+            clazz = null;
+        }
+
+        public UUID getId() {
+            UUID result = getMappedId();
+            if (result == null && payload != null) {
+                result = payload.getAs(UUID.class, MUTABLE_IDENTIFIER);
+            }
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            boolean result = false;
+            if (obj instanceof Container) {
+                UUID thisId = getMappedId();
+                UUID otherId = ((Container) obj).getMappedId();
+                result = thisId != null && thisId.equals(otherId) || super.equals(obj);
+            }
+            return result;
+        }
+
+        public int hashCode() {
+            if (getMappedId() != null) {
+                return getMappedId().hashCode();
+            } else {
+                return super.hashCode();
+            }
+        }
+
+        public UUID getMappedId() {
+            if (payload == null) return null;
+            return payload.getAs(UUID.class, IDENTIFIER);
+        }
+
+        public void delete() {
+            deleted = true;
+        }
+
+        public void updatePayload(Payload newPayload) {
+            if (immutable) {
+                throw new IllegalStateException("Tried to refresh immutable container");
+            }
+            if (payload == null) {
+                log.debug("Payload cannot be updated because its value is null");
+                return;
+            }
+            if (clazz == null) {
+                log.debug("Payload cannot be updated because container's clazz is null");
+                return;
+            }
+            if (newPayload.isEmpty()) {
+                payload.clear();
+                return;
+            }
+            for (String key : newPayload.keySet()) {
+                payload.put(key, newPayload.get(key));
+            }
+            clazz.getEAllAttributes().stream()
+                 .map(ENamedElement::getName)
+                 .filter(n -> isMappedAttribute(clazz, n))
+                 .forEach(n -> {
+                     if (!newPayload.containsKey(n)) {
+                         payload.remove(n);
+                     }
+                 });
+            clazz.getEAllReferences().stream()
+                 .map(ENamedElement::getName)
+                 .filter(n -> isMappedReference(clazz, n))
+                 .forEach(n -> {
+                     if (!newPayload.containsKey(n)) {
+                         payload.remove(n);
+                     }
+                 });
+            lastRefresh = System.currentTimeMillis();
+            log.debug(String.format("Payload %s merged as %s", newPayload, payload));
+        }
+
+        public Container refresh() {
+            if (!immutable && lastRefresh <= lastWrite) {
+                lastRefresh = System.currentTimeMillis();
+                if (getMappedId() != null) {
+                    Payload newPayload = dao.getByIdentifier(clazz, getMappedId()).orElseGet(() -> {
+                        deleted = true;
+                        return Payload.empty();
+                    });
+                    updatePayload(newPayload);
+                } else if (payload != null) {
+                    Set<String> removableKeys = new LinkedHashSet<>();
+                    for (Map.Entry<String, Object> entry : payload.entrySet()) {
+                        if (entry.getValue() instanceof Payload) {
+                            Payload contentPayload = (Payload) entry.getValue();
+                            Optional<? extends Collection<Container>> optContainer = findContainers(contentPayload);
+                            if (optContainer.isPresent()) {
+                                optContainer.get().forEach(container -> {
+                                    container.refresh();
+                                    if (container.payload != null && container.payload.isEmpty()) {
+                                        removableKeys.add(entry.getKey());
+                                    }
+                                });
+                            } else {
+                                if (contentPayload.containsKey(UNMAPPEDID) || contentPayload.containsKey("__identifier")) {
+                                    removableKeys.add(entry.getKey());
+                                }
+                            }
+                        } else if (entry.getValue() instanceof Collection) {
+                            Collection contentCollection = new ArrayList((Collection) entry.getValue());
+                            List<Payload> removable = new ArrayList<>();
+                            for (Object elem : contentCollection) {
+                                if (elem instanceof Payload) {
+                                    Payload payloadElem = (Payload) elem;
+                                    Optional<? extends Collection<Container>> optContainer = findContainers(payloadElem);
+                                    if (optContainer.isPresent()) {
+                                        optContainer.get().forEach(container -> {
+                                            container.refresh();
+                                            if (container.payload != null && container.payload.isEmpty()) {
+                                                removable.add(payloadElem);
+                                            }
+                                        });
+                                    } else {
+                                        if (payloadElem.containsKey(UNMAPPEDID) || payloadElem.containsKey("__identifier")) {
+                                            removable.add(payloadElem);
+                                        }
+                                    }
+                                }
+                            }
+                            contentCollection.removeAll(removable);
+                            if (contentCollection.isEmpty()) {
+                                removableKeys.add(entry.getKey());
+                            }
+                        }
+                    }
+                    removableKeys.forEach(key -> {
+                        if (payload.get(key) instanceof Collection) {
+                            ((Collection) payload.get(key)).clear();
+                        } else if (key != null) {
+                            payload.remove(key);
+                        }
+                    });
+
+                    if (!isMapped(clazz)) {
+                        payload.putAll(dao.getStaticFeatures(clazz));
+                    }
+                }
+            }
+            return this;
+        }
+
+        public Object containerPayloadGet(String key) { // used by generated script
+            if (deleted || oneIsNull(key, payload)) return null;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                return getPayload().get(key);
+            } else {
+                return payload.get(key);
+            }
+        }
+
+        public void containerPayloadPut(String key, Object object) { // used by generated script
+            if (oneIsNull(key, payload)) return;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                getPayload().put(key, object);
+                write();
+            } else {
+                payload.put(key, object);
+            }
+        }
+
+        public void containerPayloadRemove(String key) { // used by generated script
+            if (deleted || oneIsNull(key, payload)) return;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                getPayload().remove(key);
+                write();
+            } else {
+                payload.remove(key);
+            }
+        }
+
+        public <T> T containerPayloadGetAs(Class<T> clazz, String key) { // used by generated script
+            if (deleted || oneIsNull(clazz, key, payload)) return null;
+            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                return getPayload().getAs(clazz, key);
+            } else {
+                return payload.getAs(clazz, key);
+            }
+        }
+
+        public Payload getPayload() {
+            return deleted
+                    ? Payload.empty()
+                    : Objects.requireNonNullElse(refresh().payload, Payload.empty());
         }
     }
 
