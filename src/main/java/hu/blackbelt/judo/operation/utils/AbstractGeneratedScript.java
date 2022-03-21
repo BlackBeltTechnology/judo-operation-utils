@@ -6,10 +6,8 @@ import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.*;
 
-import java.awt.Container;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public abstract class AbstractGeneratedScript implements Function<Payload, Payload> {
@@ -34,21 +32,19 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     public class Container {
         public final Payload payload;
-        public EClass clazz;
-        public long lastRefresh;
+        public final EClass clazz;
+        public long lastRefresh = 0;
         public boolean deleted;
         public boolean immutable;
 
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
-            lastRefresh = lastWrite + 1;
         }
 
         public Container() {
             payload = null;
             clazz = null;
-            lastRefresh = lastWrite + 1;
         }
 
         public UUID getId() {
@@ -93,6 +89,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             }
             if (payload == null) {
                 log.debug("Payload cannot be updated because its value is null");
+                return;
+            }
+            if (clazz == null) {
+                log.debug("Payload cannot be updated because container's clazz is null");
                 return;
             }
             if (newPayload.isEmpty()) {
@@ -228,6 +228,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             } else {
                 return payload.getAs(clazz, key);
             }
+        }
+
+        public boolean isMutableContainer() {
+            return !deleted && payload != null && payload.containsKey(MUTABLE_IDENTIFIER);
         }
 
         private boolean oneIsNull(Object... nullables) {
@@ -405,7 +409,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 result = createOrReturnMappedContainer(clazz, payload);
             } else {
                 result = createUnmappedOrImmutableContainer(clazz, payload);
-                if (result.getPayload().containsKey(MUTABLE_IDENTIFIER)) {
+                if (result.isMutableContainer()) {
                     result.immutable = true;
                 }
             }
@@ -570,15 +574,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         Set<Container> result = new LinkedHashSet<>();
         if (container != null) {
             EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
-            List<Payload> payloads;
+            List<Payload> payloadList;
             if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
-                payloads = dao.getNavigationResultAt(container.getId(), ref);
+                payloadList = dao.getNavigationResultAt(container.getId(), ref);
             } else {
-                payloads = container.getPayload().containsKey(referenceName) ?
-                        new ArrayList<>((Collection) container.getPayload().get(referenceName)) :
+                Payload payload = container.getPayload();
+                payloadList = payload.containsKey(referenceName) ?
+                        new ArrayList<>((Collection) payload.get(referenceName)) :
                         new ArrayList<>();
             }
-            for (Payload payload : payloads) {
+            for (Payload payload : payloadList) {
                 result.add(createContainer(ref.getEReferenceType(), payload));
             }
         }
