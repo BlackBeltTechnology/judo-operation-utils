@@ -33,20 +33,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     public class Container {
         public final Payload payload;
         public final EClass clazz;
-        public long lastRefresh;
+        public long lastRefresh = 0;
         public boolean deleted;
         public boolean immutable;
 
         public Container(EClass clazz, Payload payload) {
             this.clazz = clazz;
             this.payload = payload;
-            lastRefresh = lastWrite + 1;
         }
 
         public Container() {
             payload = null;
             clazz = null;
-            lastRefresh = 0;
         }
 
         public UUID getId() {
@@ -232,10 +230,6 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             }
         }
 
-        public boolean isMutableContainer() {
-            return !deleted && payload != null && payload.containsKey(MUTABLE_IDENTIFIER);
-        }
-
         public Payload getPayload() {
             return deleted
                     ? Payload.empty()
@@ -411,7 +405,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 result = createOrReturnMappedContainer(clazz, payload);
             } else {
                 result = createUnmappedOrImmutableContainer(clazz, payload);
-                if (result.isMutableContainer()) {
+                if (result.getPayload().containsKey(MUTABLE_IDENTIFIER)) {
                     result.immutable = true;
                 }
             }
