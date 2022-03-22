@@ -31,7 +31,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     private static boolean anyNull(Object... nullables) {
-        if (nullables == null) return true;
+        if (nullables == null) {
+            return true;
+        }
         return Arrays.stream(nullables).anyMatch(Objects::isNull);
     }
 
@@ -102,7 +104,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected String replaceSeparator(String fqName) {
-        if (fqName == null) return null;
+        if (fqName == null) {
+            return null;
+        }
         return fqName.replaceAll("::", ".");
     }
 
@@ -113,7 +117,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected boolean isMappedAttribute(EClass clazz, String name) {
-        if (clazz == null || name == null) return false;
+        if (clazz == null || name == null) {
+            return false;
+        }
         return clazz.getEAllAttributes().stream()
                 .filter(r -> name.equals(r.getName()))
                 .findAny()
@@ -122,7 +128,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected boolean isMappedReference(EClass clazz, String name) {
-        if (clazz == null || name == null) return false;
+        if (clazz == null || name == null) {
+            return false;
+        }
         return clazz.getEAllReferences().stream()
                 .filter(r -> name.equals(r.getName()))
                 .findAny()
@@ -144,7 +152,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createMutableContainer(Container container) {
-        if (container == null) return null;
+        if (container == null) {
+            return null;
+        }
         Payload newPayload = Payload.asPayload(container.payload);
         if (newPayload != null && newPayload.containsKey(MUTABLE_IDENTIFIER)) {
             newPayload.put(IDENTIFIER, newPayload.remove(MUTABLE_IDENTIFIER));
@@ -166,14 +176,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Container createImmutableContainer(Container container) {
-        if (container == null) return null;
+        if (container == null) {
+            return null;
+        }
         Payload newPayload = Payload.asPayload(container.refresh().payload);
         return createImmutableContainer(container.clazz, newPayload);
     }
 
     protected Collection<Container> createImmutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
-        if (containers == null) return result;
+        if (containers == null) {
+            return result;
+        }
         for (Container container : containers) {
             result.add(createImmutableContainer(container));
         }
@@ -182,7 +196,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Collection<Container> createMutableContainerList(Collection<Container> containers) {
         List<Container> result = new ArrayList<>();
-        if (containers == null) return result;
+        if (containers == null) {
+            return result;
+        }
         for (Container container : containers) {
             result.add(createMutableContainer(container));
         }
@@ -283,7 +299,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     public Optional<? extends Collection<Container>> findContainers(Payload payload) {
         synchronized (lockContainers) {
-            if (payload == null) return Optional.empty();
+            if (payload == null) {
+                return Optional.empty();
+            }
             log.debug("Finding container " + payload);
             if (payload.containsKey(UNMAPPEDID)) {
                 if (unmappeds.containsKey(payload.getAs(UUID.class, UNMAPPEDID))) {
@@ -346,7 +364,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public UUID getMappedId() {
-            if (payload == null) return null;
+            if (payload == null) {
+                return null;
+            }
             return payload.getAs(UUID.class, IDENTIFIER);
         }
 
@@ -464,7 +484,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public Object containerPayloadGet(String key) { // used by generated script
-            if (deleted || anyNull(key, payload)) return null;
+            if (deleted || anyNull(key, payload)) {
+                return null;
+            }
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 return getPayload().get(key);
             } else {
@@ -473,27 +495,31 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public void containerPayloadPut(String key, Object object) { // used by generated script
-            if (anyNull(key, payload)) return;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                getPayload().put(key, object);
-                write();
-            } else {
-                payload.put(key, object);
+            if (!anyNull(key, payload)) {
+                if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                    getPayload().put(key, object);
+                    write();
+                } else {
+                    payload.put(key, object);
+                }
             }
         }
 
         public void containerPayloadRemove(String key) { // used by generated script
-            if (deleted || anyNull(key, payload)) return;
-            if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
-                getPayload().remove(key);
-                write();
-            } else {
-                payload.remove(key);
+            if (!deleted && !anyNull(key, payload)) {
+                if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
+                    getPayload().remove(key);
+                    write();
+                } else {
+                    payload.remove(key);
+                }
             }
         }
 
         public <T> T containerPayloadGetAs(Class<T> clazz, String key) { // used by generated script
-            if (deleted || anyNull(clazz, key, payload)) return null;
+            if (deleted || anyNull(clazz, key, payload)) {
+                return null;
+            }
             if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                 return getPayload().getAs(clazz, key);
             } else {
@@ -559,7 +585,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
         Set<Container> result = new LinkedHashSet<>();
-        if (containers == null) return result;
+        if (containers == null) {
+            return result;
+        }
         for (Container container : containers) {
             result.addAll(containersFromNavigation(container, referenceName));
         }
