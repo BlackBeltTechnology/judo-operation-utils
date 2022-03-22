@@ -598,16 +598,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         Set<Container> result = new LinkedHashSet<>();
         if (container != null) {
             EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
-            List<Payload> payloadList;
+            List<Payload> payloads;
             if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
-                payloadList = dao.getNavigationResultAt(container.getId(), ref);
+                payloads = dao.getNavigationResultAt(container.getId(), ref);
             } else {
                 Payload payload = container.getPayload();
-                payloadList = payload.containsKey(referenceName) ?
+                payloads = payload.containsKey(referenceName) ?
                         new ArrayList<>((Collection) payload.get(referenceName)) :
                         new ArrayList<>();
             }
-            for (Payload payload : payloadList) {
+            for (Payload payload : payloads) {
                 result.add(createContainer(ref.getEReferenceType(), payload));
             }
         }
