@@ -495,7 +495,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         public void containerPayloadPut(String key, Object object) { // used by generated script
-            if (!anyNull(key, payload)) {
+            if (!deleted && !anyNull(key, payload)) {
                 if (isMapped(this.clazz) && (isMappedAttribute(this.clazz, key) || isMappedReference(this.clazz, key))) {
                     getPayload().put(key, object);
                     write();
