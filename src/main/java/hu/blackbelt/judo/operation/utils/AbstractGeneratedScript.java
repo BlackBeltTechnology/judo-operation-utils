@@ -583,6 +583,22 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
+    protected /* Primitive */ void primitiveQueryCall(String queryFqName, Container subject, Payload payload) {
+        // TODO
+    }
+
+    protected /* Primitive */ void primitiveQueryCall(String queryFqName, Payload payload) {
+        // TODO
+    }
+
+    protected /* Complex */ void complexQueryCall(String queryFqName, Container subject, Payload payload) {
+        // TODO
+    }
+
+    protected /* Complex */ void complexQueryCall(String queryFqName, Payload payload) {
+        // TODO
+    }
+
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
         Set<Container> result = new LinkedHashSet<>();
         if (containers == null) {
