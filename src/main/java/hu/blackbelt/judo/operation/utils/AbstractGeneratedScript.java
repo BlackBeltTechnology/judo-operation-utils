@@ -583,20 +583,42 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
-    protected /* Primitive */ void primitiveQueryCall(String queryFqName, Container subject, Payload payload) {
+    protected /* Primitive */ void primitiveQueryCall(/* TODO */) {
         // TODO
     }
 
-    protected /* Primitive */ void primitiveQueryCall(String queryFqName, Payload payload) {
-        // TODO
+    protected Collection<Container> complexQueryCallWithSubject(Container subject,
+                                                                String returnTypeFqName,
+                                                                String referenceName,
+                                                                Payload inputPayload) {
+        // TODO: null check
+        return dao.searchNavigationResultAt(
+                        subject.getId(),
+                        subject.clazz.getEAllReferences().stream().filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
+                        DAO.QueryCustomizer.<UUID>builder()
+                                .parameters(inputPayload) // TODO: payload should be sanitized
+                                .build()
+                ).stream()
+                .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
+                .collect(Collectors.toList());
     }
 
-    protected /* Complex */ void complexQueryCall(String queryFqName, Container subject, Payload payload) {
-        // TODO
-    }
-
-    protected /* Complex */ void complexQueryCall(String queryFqName, Payload payload) {
-        // TODO
+    protected Collection<Container> complexQueryCall(String returnTypeFqName,
+                                                     String referenceContainerFqName,
+                                                     String referenceName,
+                                                     Payload inputPayload) {
+        // TODO: null check
+        EClass imaginarySubjectEClass = asmUtils.getClassByFQName(referenceContainerFqName).orElseThrow();
+        return dao.searchReferencedInstancesOf(
+                        imaginarySubjectEClass.getEAllReferences().stream()
+                                .filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
+                        imaginarySubjectEClass,
+                        DAO.QueryCustomizer.<UUID>builder()
+                                .parameters(inputPayload) // TODO: payload should be sanitized
+                                .build()
+                ).stream()
+                .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
+                .collect(Collectors.toList());
     }
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
