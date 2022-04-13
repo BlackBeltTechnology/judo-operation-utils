@@ -394,21 +394,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 payload.put(key, newPayload.get(key));
             }
             clazz.getEAllAttributes().stream()
-                 .map(ENamedElement::getName)
-                 .filter(n -> isMappedAttribute(clazz, n))
-                 .forEach(n -> {
-                     if (!newPayload.containsKey(n)) {
-                         payload.remove(n);
-                     }
-                 });
+                    .map(ENamedElement::getName)
+                    .filter(n -> isMappedAttribute(clazz, n))
+                    .forEach(n -> {
+                        if (!newPayload.containsKey(n)) {
+                            payload.remove(n);
+                        }
+                    });
             clazz.getEAllReferences().stream()
-                 .map(ENamedElement::getName)
-                 .filter(n -> isMappedReference(clazz, n))
-                 .forEach(n -> {
-                     if (!newPayload.containsKey(n)) {
-                         payload.remove(n);
-                     }
-                 });
+                    .map(ENamedElement::getName)
+                    .filter(n -> isMappedReference(clazz, n))
+                    .forEach(n -> {
+                        if (!newPayload.containsKey(n)) {
+                            payload.remove(n);
+                        }
+                    });
             lastRefresh = System.currentTimeMillis();
             log.debug(String.format("Payload %s merged as %s", newPayload, payload));
         }
@@ -591,18 +591,26 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                                                 String returnTypeFqName,
                                                                 String referenceName,
                                                                 Payload inputPayload) {
-        // TODO: null check
-        return dao.searchNavigationResultAt(
-                        subject.getId(),
-                        subject.clazz.getEAllReferences().stream().filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
-                        DAO.QueryCustomizer.<UUID>builder()
-                                .parameters(inputPayload) // TODO: payload should be sanitized
-                                .build()
-                ).stream()
-                .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
-                .collect(Collectors.toList());
+        List<Container> toReturn;
+        if (anyNull(subject, returnTypeFqName, referenceName, inputPayload) ||
+            subject.clazz == null ||
+            returnTypeFqName.isEmpty() || referenceName.isEmpty()) {
+            toReturn = new ArrayList<>();
+        } else {
+            toReturn = dao.searchNavigationResultAt(
+                            subject.getId(),
+                            subject.clazz.getEAllReferences().stream().filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
+                            DAO.QueryCustomizer.<UUID>builder()
+                                    .parameters(inputPayload) // TODO: payload should be sanitized
+                                    .build()
+                    ).stream()
+                    .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
+                    .collect(Collectors.toList());
+        }
+        return toReturn;
     }
 
+    // TODO: not usable yet
     protected Collection<Container> complexQueryCall(String returnTypeFqName,
                                                      String referenceContainerFqName,
                                                      String referenceName,
