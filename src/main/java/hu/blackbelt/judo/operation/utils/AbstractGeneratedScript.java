@@ -594,10 +594,6 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return new ArrayList<>();
         }
 
-        Map<String, Object> parameters =
-                inputPayload.getAsPayload("input").entrySet().stream()
-                            .filter(e -> !e.getKey().startsWith("__"))
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         EReference queryReference =
                 subject.clazz.getEAllReferences().stream()
                              .filter(ref -> referenceName.equals(ref.getName()))
@@ -605,7 +601,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
         return dao.searchNavigationResultAt(
                           subject.getId(), queryReference,
-                          DAO.QueryCustomizer.<UUID>builder().parameters(parameters).build()
+                          DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
                   ).stream()
                   .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
                   .collect(Collectors.toList());
@@ -618,10 +614,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         EClass returnType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
-        Map<String, Object> parameters =
-                inputPayload.getAsPayload("input").entrySet().stream()
-                            .filter(e -> !e.getKey().startsWith("__"))
-                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         EReference queryReference =
                 asmUtils.getClassByFQName(referenceContainerFqName).orElseThrow()
                         .getEAllReferences().stream()
@@ -630,10 +623,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
         return dao.searchReferencedInstancesOf(
                           queryReference, returnType,
-                          DAO.QueryCustomizer.<UUID>builder().parameters(parameters).build()
+                          DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
                   ).stream()
                   .map(p -> createContainer(returnType, p))
                   .collect(Collectors.toList());
+    }
+
+    private static Map<String, Object> sanitizeQueryParameters(Payload inputPayload) {
+        return inputPayload.getAsPayload("input").entrySet().stream()
+                           .filter(e -> !e.getKey().startsWith("__"))
+                           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
