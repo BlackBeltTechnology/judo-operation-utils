@@ -588,8 +588,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     protected Collection<Container> complexQueryCallWithSubject(Container subject, String returnTypeFqName, String referenceName, Payload inputPayload) {
-        if (anyNull(subject, returnTypeFqName, referenceName, inputPayload) ||
-            subject.clazz == null ||
+        if (anyNull(subject, returnTypeFqName, referenceName, inputPayload) || subject.clazz == null ||
             returnTypeFqName.isEmpty() || referenceName.isEmpty()) {
             return new ArrayList<>();
         }
