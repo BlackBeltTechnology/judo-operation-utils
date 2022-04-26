@@ -121,10 +121,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return false;
         }
         return clazz.getEAllAttributes().stream()
-                .filter(r -> name.equals(r.getName()))
-                .findAny()
-                .flatMap(asmUtils::getMappedAttribute)
-                .isPresent();
+                    .filter(r -> name.equals(r.getName()))
+                    .findAny()
+                    .flatMap(asmUtils::getMappedAttribute)
+                    .isPresent();
     }
 
     protected boolean isMappedReference(EClass clazz, String name) {
@@ -132,10 +132,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             return false;
         }
         return clazz.getEAllReferences().stream()
-                .filter(r -> name.equals(r.getName()))
-                .findAny()
-                .flatMap(asmUtils::getMappedReference)
-                .isPresent();
+                    .filter(r -> name.equals(r.getName()))
+                    .findAny()
+                    .flatMap(asmUtils::getMappedReference)
+                    .isPresent();
     }
 
     private final Object lockContainers = new Object();
@@ -394,21 +394,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 payload.put(key, newPayload.get(key));
             }
             clazz.getEAllAttributes().stream()
-                    .map(ENamedElement::getName)
-                    .filter(n -> isMappedAttribute(clazz, n))
-                    .forEach(n -> {
-                        if (!newPayload.containsKey(n)) {
-                            payload.remove(n);
-                        }
-                    });
+                 .map(ENamedElement::getName)
+                 .filter(n -> isMappedAttribute(clazz, n))
+                 .forEach(n -> {
+                     if (!newPayload.containsKey(n)) {
+                         payload.remove(n);
+                     }
+                 });
             clazz.getEAllReferences().stream()
-                    .map(ENamedElement::getName)
-                    .filter(n -> isMappedReference(clazz, n))
-                    .forEach(n -> {
-                        if (!newPayload.containsKey(n)) {
-                            payload.remove(n);
-                        }
-                    });
+                 .map(ENamedElement::getName)
+                 .filter(n -> isMappedReference(clazz, n))
+                 .forEach(n -> {
+                     if (!newPayload.containsKey(n)) {
+                         payload.remove(n);
+                     }
+                 });
             lastRefresh = System.currentTimeMillis();
             log.debug(String.format("Payload %s merged as %s", newPayload, payload));
         }
@@ -552,7 +552,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         String fqName = getFqName(namespace, name);
         List<Container> result = new ArrayList<>();
         EClass clazz = asmUtils.getClassByFQName(fqName)
-                .orElseThrow(() -> new RuntimeException(String.format("Class with fq name %s cannot be found", fqName)));
+                               .orElseThrow(() -> new RuntimeException(String.format("Class with fq name %s cannot be found", fqName)));
         List<Payload> payloads = dao.getAllOf(clazz);
         for (Payload payload : payloads) {
             payload.put(TO_TYPE, AsmUtils.getClassifierFQName(clazz));
@@ -587,46 +587,53 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         // TODO
     }
 
-    protected Collection<Container> complexQueryCallWithSubject(Container subject,
-                                                                String returnTypeFqName,
-                                                                String referenceName,
-                                                                Payload inputPayload) {
-        List<Container> toReturn;
+    protected Collection<Container> complexQueryCallWithSubject(Container subject, String returnTypeFqName, String referenceName, Payload inputPayload) {
         if (anyNull(subject, returnTypeFqName, referenceName, inputPayload) ||
             subject.clazz == null ||
             returnTypeFqName.isEmpty() || referenceName.isEmpty()) {
-            toReturn = new ArrayList<>();
-        } else {
-            toReturn = dao.searchNavigationResultAt(
-                            subject.getId(),
-                            subject.clazz.getEAllReferences().stream().filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
-                            DAO.QueryCustomizer.<UUID>builder()
-                                    .parameters(inputPayload) // TODO: payload should be sanitized
-                                    .build()
-                    ).stream()
-                    .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
-                    .collect(Collectors.toList());
+            return new ArrayList<>();
         }
-        return toReturn;
+
+        Map<String, Object> parameters =
+                inputPayload.getAsPayload("input").entrySet().stream()
+                            .filter(e -> !e.getKey().startsWith("__"))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        EReference queryReference =
+                subject.clazz.getEAllReferences().stream()
+                             .filter(ref -> referenceName.equals(ref.getName()))
+                             .findAny().orElseThrow();
+
+        return dao.searchNavigationResultAt(
+                          subject.getId(), queryReference,
+                          DAO.QueryCustomizer.<UUID>builder().parameters(parameters).build()
+                  ).stream()
+                  .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
+                  .collect(Collectors.toList());
     }
 
-    // TODO: not usable yet
-    protected Collection<Container> complexQueryCall(String returnTypeFqName,
-                                                     String referenceContainerFqName,
-                                                     String referenceName,
-                                                     Payload inputPayload) {
-        // TODO: null check
-        EClass imaginarySubjectEClass = asmUtils.getClassByFQName(referenceContainerFqName).orElseThrow();
+    protected Collection<Container> complexQueryCall(String returnTypeFqName, String referenceContainerFqName, String referenceName, Payload inputPayload) {
+        if (anyNull(returnTypeFqName, referenceContainerFqName, referenceName, inputPayload) ||
+            returnTypeFqName.isEmpty() || referenceContainerFqName.isEmpty() || referenceName.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        EClass returnType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
+        Map<String, Object> parameters =
+                inputPayload.getAsPayload("input").entrySet().stream()
+                            .filter(e -> !e.getKey().startsWith("__"))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        EReference queryReference =
+                asmUtils.getClassByFQName(referenceContainerFqName).orElseThrow()
+                        .getEAllReferences().stream()
+                        .filter(ref -> referenceName.equals(ref.getName()))
+                        .findAny().orElseThrow();
+
         return dao.searchReferencedInstancesOf(
-                        imaginarySubjectEClass.getEAllReferences().stream()
-                                .filter(ref -> referenceName.equals(ref.getName())).findAny().orElseThrow(),
-                        imaginarySubjectEClass,
-                        DAO.QueryCustomizer.<UUID>builder()
-                                .parameters(inputPayload) // TODO: payload should be sanitized
-                                .build()
-                ).stream()
-                .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
-                .collect(Collectors.toList());
+                          queryReference, returnType,
+                          DAO.QueryCustomizer.<UUID>builder().parameters(parameters).build()
+                  ).stream()
+                  .map(p -> createContainer(returnType, p))
+                  .collect(Collectors.toList());
     }
 
     protected Set<Container> containersFromNavigation(Collection<Container> containers, String referenceName) {
@@ -670,8 +677,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalArgumentException("Entity id is null");
         }
         Container container = dao.getByIdentifier(clazz, mappedId)
-                .map(payload -> createContainer(clazz, payload))
-                .orElse(null);
+                                 .map(payload -> createContainer(clazz, payload))
+                                 .orElse(null);
         write();
         return container;
     }
@@ -720,7 +727,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Optional<Integer> getScale(EClass clazz, String attributeName) {
         return clazz.getEAttributes().stream().filter(attr -> attr.getName().equals(attributeName)).findAny()
-                .flatMap(attribute -> AsmUtils.getExtensionAnnotationCustomValue(attribute, "constraints", "scale", false).map(Integer::valueOf));
+                    .flatMap(attribute -> AsmUtils.getExtensionAnnotationCustomValue(attribute, "constraints", "scale", false).map(Integer::valueOf));
     }
 
     protected Payload getStaticData(String namespace, String name, String attributeName) {
@@ -732,15 +739,15 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Container getStaticDataContainer(String namespace, String name) {
         String typeFqName = replaceSeparator(getFqName(namespace, name));
         EClass eClass = asmUtils.getClassByFQName(typeFqName)
-                .orElseThrow(() -> new NoSuchElementException(String.format("Class with fqname %s cannot be found", typeFqName)));
+                                .orElseThrow(() -> new NoSuchElementException(String.format("Class with fqname %s cannot be found", typeFqName)));
         return createUnmappedOrImmutableContainer(eClass, Payload.empty());
     }
 
     protected boolean isContainment(EReference reference) {
         return asmUtils.getMappedReference(reference)
-                .map(EReference::isContainment)
-                .orElseThrow(() -> new NoSuchElementException(
-                        String.format("Mapped reference of %s cannot be found", reference.getName())));
+                       .map(EReference::isContainment)
+                       .orElseThrow(() -> new NoSuchElementException(
+                               String.format("Mapped reference of %s cannot be found", reference.getName())));
     }
 
     protected void assignNewEmbeddedCollection(Container target, EReference reference, Collection<Payload> payloads) {
