@@ -529,8 +529,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
         public Payload getPayload() {
             return deleted
-                   ? Payload.empty()
-                   : Objects.requireNonNullElse(refresh().payload, Payload.empty());
+                    ? Payload.empty()
+                    : Objects.requireNonNullElse(refresh().payload, Payload.empty());
         }
     }
 
@@ -591,8 +591,9 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         List<Payload> searchResult =
                 dao.search(subject.clazz,
                            DAO.QueryCustomizer.<UUID>builder()
-                                              .instanceIds(Collections.singletonList(subject.getId()))
+                                              .mask(Collections.singletonMap(queryName, true))
                                               .parameters(sanitizeQueryParameters(inputPayload))
+                                              .instanceIds(Collections.singletonList(subject.getId()))
                                               .build());
         return extractPrimitiveQueryResult(queryName, searchResult);
     }
@@ -605,17 +606,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         List<Payload> searchResult =
                 dao.search(asmUtils.getClassByFQName(queryContainerFqName).orElseThrow(),
                            DAO.QueryCustomizer.<UUID>builder()
+                                              .mask(Collections.singletonMap(queryName, true))
                                               .parameters(sanitizeQueryParameters(inputPayload))
                                               .build());
         return extractPrimitiveQueryResult(queryName, searchResult);
     }
 
     private static Object extractPrimitiveQueryResult(String queryName, List<Payload> searchResult) {
-        if (searchResult.size() > 1) {
-            throw new IllegalStateException("Search result contains more then 1 items: " + searchResult);
+        Set<Object> mappedResult = searchResult.stream()
+                                                     .map(p -> p.get(queryName))
+                                                     .collect(Collectors.toSet());
+        if (mappedResult.size() > 1) {
+            throw new IllegalStateException("There are multiple results for single primitive query: " +
+                                            mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
         }
-
-        return searchResult.stream().findAny().map(p -> p.get(queryName)).orElse(null);
+        return mappedResult.stream().findAny().orElse(null);
     }
 
     protected Collection<Container> complexQueryCall(Container subject, String returnTypeFqName, String queryName, Payload inputPayload) {
@@ -684,8 +689,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             } else {
                 Payload payload = container.getPayload();
                 payloads = payload.containsKey(referenceName)
-                           ? new ArrayList<>((Collection) payload.get(referenceName))
-                           : new ArrayList<>();
+                        ? new ArrayList<>((Collection) payload.get(referenceName))
+                        : new ArrayList<>();
             }
             for (Payload payload : payloads) {
                 result.add(createContainer(ref.getEReferenceType(), payload));
