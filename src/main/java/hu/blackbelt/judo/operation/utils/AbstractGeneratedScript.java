@@ -583,11 +583,12 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
+    // instance
     protected Object primitiveQueryCall(Container subject, String queryName, Payload inputPayload) {
         if (anyNull(subject, subject.clazz, queryName, inputPayload) || queryName.isEmpty()) {
-            // TODO: add more info
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(); // TODO
         }
+
         List<Payload> searchResult =
                 dao.search(subject.clazz,
                            DAO.QueryCustomizer.<UUID>builder()
@@ -598,11 +599,12 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return extractPrimitiveQueryResult(queryName, searchResult);
     }
 
+    // static
     protected Object primitiveQueryCall(String queryContainerFqName, String queryName, Payload inputPayload) {
         if (anyNull(queryContainerFqName, queryName, inputPayload) || queryName.isEmpty()) {
-            // TODO: add more info
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(); // TODO
         }
+
         List<Payload> searchResult =
                 dao.search(asmUtils.getClassByFQName(queryContainerFqName).orElseThrow(),
                            DAO.QueryCustomizer.<UUID>builder()
@@ -614,8 +616,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     private static Object extractPrimitiveQueryResult(String queryName, List<Payload> searchResult) {
         Set<Object> mappedResult = searchResult.stream()
-                                                     .map(p -> p.get(queryName))
-                                                     .collect(Collectors.toSet());
+                                               .map(p -> p.get(queryName))
+                                               .collect(Collectors.toSet());
         if (mappedResult.size() > 1) {
             throw new IllegalStateException("There are multiple results for single primitive query: " +
                                             mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
@@ -623,14 +625,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         return mappedResult.stream().findAny().orElse(null);
     }
 
+    // instance
     protected Collection<Container> complexQueryCall(Container subject, String returnTypeFqName, String queryName, Payload inputPayload) {
         if (anyNull(subject, returnTypeFqName, queryName, inputPayload) || subject.clazz == null ||
             returnTypeFqName.isEmpty() || queryName.isEmpty()) {
-            // TODO: add more info
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(); // TODO
         }
 
-        EClass returnType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
         EReference queryReference = subject.clazz.getEAllReferences().stream()
                                                  .filter(ref -> queryName.equals(ref.getName()))
                                                  .findAny().orElseThrow();
@@ -638,22 +639,22 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                           subject.getId(), queryReference,
                           DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
                   ).stream()
-                  .map(payload -> createContainer(returnType, payload))
+                  .map(payload -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), payload))
                   .collect(Collectors.toList());
     }
 
+    // static
     protected Collection<Container> complexQueryCall(String returnTypeFqName, String queryContainerFqName, String queryName, Payload inputPayload) {
         if (anyNull(returnTypeFqName, queryContainerFqName, queryName, inputPayload) || returnTypeFqName.isEmpty() ||
             queryContainerFqName.isEmpty() || queryName.isEmpty()) {
-            // TODO: add more info
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(); // TODO
         }
 
         EClass returnType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
         EReference queryReference = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow()
-                                            .getEAllReferences().stream()
-                                            .filter(ref -> queryName.equals(ref.getName()))
-                                            .findAny().orElseThrow();
+                .getEAllReferences().stream()
+                .filter(ref -> queryName.equals(ref.getName()))
+                .findAny().orElseThrow();
         return dao.searchReferencedInstancesOf(
                           queryReference, returnType,
                           DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
