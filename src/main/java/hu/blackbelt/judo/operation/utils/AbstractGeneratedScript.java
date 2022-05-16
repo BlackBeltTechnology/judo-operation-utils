@@ -589,14 +589,24 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalArgumentException(); // TODO
         }
 
-        List<Payload> searchResult =
-                dao.search(subject.clazz,
-                           DAO.QueryCustomizer.<UUID>builder()
-                                              .mask(Collections.singletonMap(queryName, true))
-                                              .parameters(sanitizeQueryParameters(inputPayload))
-                                              .instanceIds(Collections.singletonList(subject.getId()))
-                                              .build());
-        return extractPrimitiveQueryResult(queryName, searchResult);
+        if (!isMapped(subject.clazz)) {
+            return primitiveQueryCall(AsmUtils.getClassifierFQName(subject.clazz), queryName, inputPayload);
+        }
+
+        Set<Object> mappedResult = dao.search(subject.clazz,
+                                              DAO.QueryCustomizer.<UUID>builder()
+                                                                 .mask(Collections.singletonMap(queryName, true))
+                                                                 .parameters(sanitizeQueryParameters(inputPayload))
+                                                                 .instanceIds(Collections.singletonList(subject.getId()))
+                                                                 .build()).stream()
+                                      .map(p -> p.get(queryName))
+                                      .collect(Collectors.toSet());
+        if (mappedResult.size() > 1) {
+            throw new IllegalStateException("There are multiple results for single primitive query: " +
+                                            mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
+        }
+
+        return mappedResult.stream().findAny().orElse(null);
     }
 
     // static
@@ -605,24 +615,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalArgumentException(); // TODO
         }
 
-        List<Payload> searchResult =
-                dao.search(asmUtils.getClassByFQName(queryContainerFqName).orElseThrow(),
-                           DAO.QueryCustomizer.<UUID>builder()
-                                              .mask(Collections.singletonMap(queryName, true))
-                                              .parameters(sanitizeQueryParameters(inputPayload))
-                                              .build());
-        return extractPrimitiveQueryResult(queryName, searchResult);
-    }
-
-    private static Object extractPrimitiveQueryResult(String queryName, List<Payload> searchResult) {
-        Set<Object> mappedResult = searchResult.stream()
-                                               .map(p -> p.get(queryName))
-                                               .collect(Collectors.toSet());
-        if (mappedResult.size() > 1) {
-            throw new IllegalStateException("There are multiple results for single primitive query: " +
-                                            mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
+        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
+        if (isMapped(queryContainer)) {
+            throw new IllegalStateException(); // TODO
         }
-        return mappedResult.stream().findAny().orElse(null);
+
+        EAttribute query = queryContainer.getEAllAttributes().stream()
+                                         .filter(a -> queryName.equals(a.getName()))
+                                         .findAny().orElseThrow();
+
+        return dao.getParameterizedStaticData(query, sanitizeQueryParameters(inputPayload)).get(queryName);
     }
 
     // instance
@@ -632,13 +634,19 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalArgumentException(); // TODO
         }
 
-        EReference queryReference = subject.clazz.getEAllReferences().stream()
-                                                 .filter(ref -> queryName.equals(ref.getName()))
-                                                 .findAny().orElseThrow();
-        return dao.searchNavigationResultAt(
-                          subject.getId(), queryReference,
-                          DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
-                  ).stream()
+        if (!isMapped(subject.clazz)) {
+            return complexQueryCall(returnTypeFqName, AsmUtils.getClassifierFQName(subject.clazz), queryName, inputPayload);
+        }
+
+        EReference query = subject.clazz.getEAllReferences().stream()
+                                        .filter(r -> queryName.equals(r.getName()))
+                                        .findAny().orElseThrow();
+
+        return dao.searchNavigationResultAt(subject.getId(), query,
+                                            DAO.QueryCustomizer.<UUID>builder()
+                                                               .mask(Collections.singletonMap(queryName, true))
+                                                               .parameters(sanitizeQueryParameters(inputPayload))
+                                                               .build()).stream()
                   .map(payload -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), payload))
                   .collect(Collectors.toList());
     }
@@ -650,16 +658,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalArgumentException(); // TODO
         }
 
-        EClass returnType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
-        EReference queryReference = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow()
-                .getEAllReferences().stream()
-                .filter(ref -> queryName.equals(ref.getName()))
-                .findAny().orElseThrow();
-        return dao.searchReferencedInstancesOf(
-                          queryReference, returnType,
-                          DAO.QueryCustomizer.<UUID>builder().parameters(sanitizeQueryParameters(inputPayload)).build()
-                  ).stream()
-                  .map(p -> createContainer(returnType, p))
+        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
+        if (isMapped(queryContainer)) {
+            throw new IllegalStateException(); // TODO
+        }
+
+        EReference query = queryContainer.getEAllReferences().stream()
+                                         .filter(r -> queryName.equals(r.getName()))
+                                         .findAny().orElseThrow();
+
+        return dao.searchReferencedInstancesOf(query, queryContainer,
+                                               DAO.QueryCustomizer.<UUID>builder()
+                                                                  .mask(Collections.singletonMap(queryName, true))
+                                                                  .parameters(sanitizeQueryParameters(inputPayload))
+                                                                  .build()).stream()
+                  .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
                   .collect(Collectors.toList());
     }
 
