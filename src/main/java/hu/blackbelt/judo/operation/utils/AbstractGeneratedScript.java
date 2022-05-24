@@ -583,11 +583,31 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
+    private static void parameterCheck(Object object, String name) {
+        if (object == null) {
+            throw new IllegalArgumentException(name + " cannot be null");
+        }
+        if (object instanceof String && ((String) object).trim().isEmpty()) {
+            throw new IllegalArgumentException(name + " cannot be empty");
+        }
+    }
+
+    private static void parameterChecks(Map<Object, String> parameters) {
+        if (parameters == null) {
+            throw new IllegalArgumentException("Parameters cannot be null");
+        }
+        parameters.forEach(AbstractGeneratedScript::parameterCheck);
+    }
+
     // instance
     protected Object primitiveQueryCall(Container subject, String queryName, String inputType, Payload inputPayload) {
-        if (anyNull(subject, subject.clazz, queryName, inputType, inputPayload) || queryName.isEmpty() || inputType.isEmpty()) {
-            throw new IllegalArgumentException(); // TODO
-        }
+        parameterChecks(Map.of(
+                subject, "subject",
+                queryName, "queryName",
+                inputType, "inputType",
+                inputPayload, "inputPayload"
+        ));
+        parameterCheck(subject.clazz, "subject.clazz");
 
         if (!isMapped(subject.clazz)) {
             return primitiveQueryCall(AsmUtils.getClassifierFQName(subject.clazz), queryName, inputType, inputPayload);
@@ -611,13 +631,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     // static
     protected Object primitiveQueryCall(String queryContainerFqName, String queryName, String inputType, Payload inputPayload) {
-        if (anyNull(queryContainerFqName, queryName, inputType, inputPayload) || queryName.isEmpty() || inputType.isEmpty()) {
-            throw new IllegalArgumentException(); // TODO
-        }
+        parameterChecks(Map.of(
+                queryContainerFqName, "queryContainerFqName",
+                queryName, "queryName",
+                inputType, "inputType",
+                inputPayload, "inputPayload"
+        ));
 
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
         if (isMapped(queryContainer)) {
-            throw new IllegalStateException(); // TODO
+            throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
         return dao.getParameterizedStaticData(queryContainer.getEAllAttributes().stream()
@@ -629,10 +652,14 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     // instance
     protected Collection<Container> complexQueryCall(Container subject, String returnTypeFqName, String queryName,
                                                      String inputType, Payload inputPayload) {
-        if (anyNull(subject, returnTypeFqName, queryName, inputType, inputPayload) || subject.clazz == null ||
-            returnTypeFqName.isEmpty() || queryName.isEmpty() || inputType.isEmpty()) {
-            throw new IllegalArgumentException(); // TODO
-        }
+        parameterChecks(Map.of(
+                subject, "subject",
+                returnTypeFqName, "returnTypeFqName",
+                queryName, "queryName",
+                inputType, "inputType",
+                inputPayload, "inputPayload"
+        ));
+        parameterCheck(subject.clazz, "subject.clazz");
 
         if (!isMapped(subject.clazz)) {
             return complexQueryCall(returnTypeFqName, AsmUtils.getClassifierFQName(subject.clazz), queryName, inputType, inputPayload);
@@ -653,14 +680,17 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     // static
     protected Collection<Container> complexQueryCall(String returnTypeFqName, String queryContainerFqName,
                                                      String queryName, String inputType, Payload inputPayload) {
-        if (anyNull(returnTypeFqName, queryContainerFqName, queryName, inputType, inputPayload) || returnTypeFqName.isEmpty() ||
-            queryContainerFqName.isEmpty() || queryName.isEmpty() || inputType.isEmpty()) {
-            throw new IllegalArgumentException(); // TODO
-        }
+        parameterChecks(Map.of(
+                returnTypeFqName, "returnTypeFqName",
+                queryContainerFqName, "queryContainerFqName",
+                queryName, "queryName",
+                inputType, "inputType",
+                inputPayload, "inputPayload"
+        ));
 
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
         if (isMapped(queryContainer)) {
-            throw new IllegalStateException(); // TODO
+            throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
         EClass targetType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
