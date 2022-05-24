@@ -663,15 +663,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalStateException(); // TODO
         }
 
+        EClass targetType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
         return dao.searchReferencedInstancesOf(queryContainer.getEAllReferences().stream()
                                                              .filter(r -> queryName.equals(r.getName()))
                                                              .findAny().orElseThrow(),
-                                               queryContainer,
+                                               targetType,
                                                DAO.QueryCustomizer.<UUID>builder()
                                                                   .mask(Collections.singletonMap(queryName, true))
                                                                   .parameters(sanitizeQueryParameters(inputType, inputPayload))
                                                                   .build()).stream()
-                  .map(p -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), p))
+                  .map(p -> createContainer(targetType, p))
                   .collect(Collectors.toList());
     }
 
