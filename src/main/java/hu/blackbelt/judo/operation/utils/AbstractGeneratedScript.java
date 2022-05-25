@@ -567,7 +567,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             boolean mappedEClass = isMapped(container.clazz);
             boolean mappedEAttribute = isMappedAttribute(container.clazz, attributeName);
             if (mappedEClass && mappedEAttribute) {
-                instance = dao.getByIdentifier(container.clazz, container.getId()).get();
+                instance = dao.getByIdentifier(container.clazz, container.getId())
+                              .orElseThrow(() -> new IllegalStateException(String.format("Mapped transferobject %s with id %s cannot be found",
+                                                                                         AsmUtils.getClassifierFQName(container.clazz),
+                                                                                         container.getId())));
             } else {
                 instance = container.getPayload();
             }
@@ -638,15 +641,20 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 inputPayload, "inputPayload"
         ));
 
-        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
+        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
+                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + queryContainerFqName));
         if (isMapped(queryContainer)) {
             throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
-        return dao.getParameterizedStaticData(queryContainer.getEAllAttributes().stream()
-                                                            .filter(a -> queryName.equals(a.getName()))
-                                                            .findAny().orElseThrow(),
-                                              sanitizeQueryParameters(inputType, inputPayload)).get(queryName);
+        return dao.getParameterizedStaticData(
+                          queryContainer.getEAllAttributes().stream()
+                                        .filter(a -> queryName.equals(a.getName()))
+                                        .findAny()
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
+                                                                                                      queryContainerFqName, queryName))),
+                          sanitizeQueryParameters(inputType, inputPayload))
+                  .get(queryName);
     }
 
     // instance
@@ -661,19 +669,25 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         ));
         parameterCheck(subject.clazz, "subject.clazz");
 
+        String subjectFqName = AsmUtils.getClassifierFQName(subject.clazz);
         if (!isMapped(subject.clazz)) {
-            return complexQueryCall(returnTypeFqName, AsmUtils.getClassifierFQName(subject.clazz), queryName, inputType, inputPayload);
+            return complexQueryCall(returnTypeFqName, subjectFqName, queryName, inputType, inputPayload);
         }
 
-        return dao.searchNavigationResultAt(subject.getId(),
-                                            subject.clazz.getEAllReferences().stream()
-                                                         .filter(r -> queryName.equals(r.getName()))
-                                                         .findAny().orElseThrow(),
-                                            DAO.QueryCustomizer.<UUID>builder()
-                                                               .mask(Collections.singletonMap(queryName, true))
-                                                               .parameters(sanitizeQueryParameters(inputType, inputPayload))
-                                                               .build()).stream()
-                  .map(payload -> createContainer(asmUtils.getClassByFQName(returnTypeFqName).orElseThrow(), payload))
+        return dao.searchNavigationResultAt(
+                          subject.getId(),
+                          subject.clazz.getEAllReferences().stream()
+                                       .filter(r -> queryName.equals(r.getName()))
+                                       .findAny()
+                                       .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
+                                                                                                     subjectFqName, queryName))),
+                          DAO.QueryCustomizer.<UUID>builder()
+                                             .mask(Collections.singletonMap(queryName, true))
+                                             .parameters(sanitizeQueryParameters(inputType, inputPayload))
+                                             .build()).stream()
+                  .map(payload -> createContainer(asmUtils.getClassByFQName(returnTypeFqName)
+                                                          .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + returnTypeFqName)),
+                                                  payload))
                   .collect(Collectors.toList());
     }
 
@@ -688,26 +702,32 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 inputPayload, "inputPayload"
         ));
 
-        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName).orElseThrow();
+        EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
+                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + queryContainerFqName));
         if (isMapped(queryContainer)) {
             throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
-        EClass targetType = asmUtils.getClassByFQName(returnTypeFqName).orElseThrow();
-        return dao.searchReferencedInstancesOf(queryContainer.getEAllReferences().stream()
-                                                             .filter(r -> queryName.equals(r.getName()))
-                                                             .findAny().orElseThrow(),
-                                               targetType,
-                                               DAO.QueryCustomizer.<UUID>builder()
-                                                                  .mask(Collections.singletonMap(queryName, true))
-                                                                  .parameters(sanitizeQueryParameters(inputType, inputPayload))
-                                                                  .build()).stream()
+        EClass targetType = asmUtils.getClassByFQName(returnTypeFqName)
+                                    .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + returnTypeFqName));
+        return dao.searchReferencedInstancesOf(
+                          queryContainer.getEAllReferences().stream()
+                                        .filter(r -> queryName.equals(r.getName()))
+                                        .findAny()
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
+                                                                                                      queryContainerFqName, queryName))),
+                          targetType,
+                          DAO.QueryCustomizer.<UUID>builder()
+                                             .mask(Collections.singletonMap(queryName, true))
+                                             .parameters(sanitizeQueryParameters(inputType, inputPayload))
+                                             .build()).stream()
                   .map(p -> createContainer(targetType, p))
                   .collect(Collectors.toList());
     }
 
     private Map<String, Object> sanitizeQueryParameters(String inputType, Payload inputPayload) {
-        Set<String> possibleParameterNames = asmUtils.getClassByFQName(inputType).orElseThrow()
+        Set<String> possibleParameterNames = asmUtils.getClassByFQName(inputType)
+                                                     .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + inputType))
                                                      .getEAllAttributes().stream()
                                                      .map(ENamedElement::getName)
                                                      .collect(Collectors.toSet());
@@ -729,8 +749,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Set<Container> containersFromNavigation(Container container, String referenceName) {
         Set<Container> result = new LinkedHashSet<>();
-        if (container != null) {
-            EReference ref = container.clazz.getEAllReferences().stream().filter(r -> Objects.equals(r.getName(), referenceName)).findAny().get();
+        if (container != null && container.clazz != null) {
+            EReference ref = container.clazz.getEAllReferences().stream()
+                                            .filter(r -> Objects.equals(r.getName(), referenceName))
+                                            .findAny()
+                                            .orElseThrow(() -> new IllegalArgumentException(String.format("Relation feature of %s cannot be found: %s",
+                                                                                                          AsmUtils.getClassifierFQName(container.clazz),
+                                                                                                          referenceName)));
             List<Payload> payloads;
             if (isMapped(container.clazz) && isMappedReference(container.clazz, ref.getName())) {
                 payloads = dao.getNavigationResultAt(container.getId(), ref);
@@ -812,7 +837,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected Payload getStaticData(String namespace, String name, String attributeName) {
         String typeFqName = replaceSeparator(getFqName(namespace, name));
-        EAttribute eAttribute = asmUtils.getClassByFQName(typeFqName).get().getEAttributes().stream().filter(attr -> attr.getName().equals(attributeName)).findAny().get();
+        EAttribute eAttribute = asmUtils.getClassByFQName(typeFqName)
+                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + typeFqName))
+                                        .getEAttributes().stream()
+                                        .filter(attr -> attr.getName().equals(attributeName))
+                                        .findAny()
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
+                                                                                                      typeFqName, attributeName)));
         return dao.getStaticData(eAttribute);
     }
 
