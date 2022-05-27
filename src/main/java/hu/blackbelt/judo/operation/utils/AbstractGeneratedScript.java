@@ -6,6 +6,7 @@ import hu.blackbelt.judo.meta.asm.runtime.AsmModel;
 import hu.blackbelt.judo.meta.asm.runtime.AsmUtils;
 import org.eclipse.emf.ecore.*;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -595,7 +596,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
-    private static void parameterChecks(Map<Object, String> parameters) {
+    private static void parameterCheck(Map<Object, String> parameters) {
         if (parameters == null) {
             throw new IllegalArgumentException("Parameters cannot be null");
         }
@@ -604,7 +605,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     // instance
     protected <T> T primitiveQueryCall(Class<T> clazz, Container subject, String queryName, String inputType, Payload inputPayload) {
-        parameterChecks(Map.of(
+        parameterCheck(Map.of(
                 subject, "subject",
                 queryName, "queryName",
                 inputType, "inputType",
@@ -629,12 +630,12 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                             mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
         }
 
-        return mappedResult.stream().findAny().map(clazz::cast).orElse(null);
+        return convertIfRequired(clazz, mappedResult.stream().findAny().orElse(null));
     }
 
     // static
     protected <T> T primitiveQueryCall(Class<T> clazz, String queryContainerFqName, String queryName, String inputType, Payload inputPayload) {
-        parameterChecks(Map.of(
+        parameterCheck(Map.of(
                 queryContainerFqName, "queryContainerFqName",
                 queryName, "queryName",
                 inputType, "inputType",
@@ -647,20 +648,60 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
-        return dao.getParameterizedStaticData(
+        return convertIfRequired(clazz, dao.getParameterizedStaticData(
                           queryContainer.getEAllAttributes().stream()
                                         .filter(a -> queryName.equals(a.getName()))
                                         .findAny()
                                         .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
                                                                                                       queryContainerFqName, queryName))),
                           sanitizeQueryParameters(inputType, inputPayload))
-                  .getAs(clazz, queryName);
+                  .get(queryName));
+    }
+
+    private static <T> T convertIfRequired(Class<T> target, Object source) {
+        parameterCheck(Map.of(
+                target, "target",
+                source, "source"
+        ));
+
+        final T toReturn;
+        if (target.isAssignableFrom(source.getClass())) {
+            toReturn = target.cast(source);
+        } else {
+            Optional<Constructor<T>> typeCtr =
+                    Arrays.stream(target.getConstructors())
+                          .filter(ctr -> ctr.getParameterTypes().length == 1 && source.getClass().equals(ctr.getParameterTypes()[0]))
+                          .map(ctr -> (Constructor<T>) ctr)
+                          .findAny();
+            Optional<Constructor<T>> stringCtr =
+                    Arrays.stream(target.getConstructors())
+                          .filter(ctr -> ctr.getParameterTypes().length == 1 && String.class.equals(ctr.getParameterTypes()[0]))
+                          .map(ctr -> (Constructor<T>) ctr)
+                          .findAny();
+            if (typeCtr.isPresent()) {
+                try {
+                    toReturn = typeCtr.get().newInstance(source);
+                } catch (Exception e) {
+                    throw new RuntimeException("Primitive query result conversion failed", e);
+                }
+            } else if (stringCtr.isPresent()) {
+                try {
+                    toReturn = stringCtr.get().newInstance(String.valueOf(source));
+                } catch (Exception e) {
+                    throw new RuntimeException("Primitive query result conversion failed", e);
+                }
+            } else {
+                throw new RuntimeException(String.format("Primitive query result cannot be converted: %s => %s",
+                                                         source.getClass().getName(), target.getName()));
+            }
+        }
+        return toReturn;
     }
 
     // instance
     protected Collection<Container> complexQueryCall(Container subject, String returnTypeFqName, String queryName,
                                                      String inputType, Payload inputPayload) {
-        parameterChecks(Map.of(
+        parameterCheck(Map.of(
                 subject, "subject",
                 returnTypeFqName, "returnTypeFqName",
                 queryName, "queryName",
@@ -694,7 +735,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     // static
     protected Collection<Container> complexQueryCall(String returnTypeFqName, String queryContainerFqName,
                                                      String queryName, String inputType, Payload inputPayload) {
-        parameterChecks(Map.of(
+        parameterCheck(Map.of(
                 returnTypeFqName, "returnTypeFqName",
                 queryContainerFqName, "queryContainerFqName",
                 queryName, "queryName",
