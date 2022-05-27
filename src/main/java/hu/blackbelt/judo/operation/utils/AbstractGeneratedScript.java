@@ -27,6 +27,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
      */
     public static final String TO_TYPE = "__toType";
 
+    public static final String NULL_PARAMETER_FORMAT = "%s cannot be null";
+    public static final String EMPTY_STRING_PARAMETER_FORMAT = "%s cannot be empty";
+
+    public static final String ECLASS_NOT_FOUND_FORMAT = "EClass cannot be found: %s";
+    public static final String ATTRIBUTE_NOT_FOUND_FORMAT = "Attribute feature of %s cannot be found: %s";
+    public static final String RELATION_FEATURE_NOT_FOUND_FORMAT = "Relation feature of %s cannot be found: %s";
+
+    public static final String MULTIPLE_RESULTS_FOR_SINGLE_PRIMITIVE_QUERY_FORMAT = "There are multiple results for single primitive query: %s";
+
+    public static final String PRIMITIVE_QUERY_RESULT_CONVERSION_FAILED = "Primitive query result conversion failed";
+    public static final String PRIMITIVE_QUERY_RESULT_CANNOT_BE_CONVERTED_FORMAT = "Primitive query result cannot be converted: %s => %s";
+
     protected AbstractGeneratedScript() {
         functionRunner = new FunctionRunner(this);
     }
@@ -589,10 +601,10 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     private static void parameterCheck(Object object, String name) {
         if (object == null) {
-            throw new IllegalArgumentException(name + " cannot be null");
+            throw new IllegalArgumentException(String.format(NULL_PARAMETER_FORMAT, name));
         }
         if (object instanceof String && ((String) object).trim().isEmpty()) {
-            throw new IllegalArgumentException(name + " cannot be empty");
+            throw new IllegalArgumentException(String.format(EMPTY_STRING_PARAMETER_FORMAT, name));
         }
     }
 
@@ -626,8 +638,8 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                       .map(p -> p.get(queryName))
                                       .collect(Collectors.toSet());
         if (mappedResult.size() > 1) {
-            throw new IllegalStateException("There are multiple results for single primitive query: " +
-                                            mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
+            throw new IllegalStateException(String.format(MULTIPLE_RESULTS_FOR_SINGLE_PRIMITIVE_QUERY_FORMAT,
+                                                          mappedResult.stream().map(Object::toString).collect(Collectors.joining(","))));
         }
 
         return convertIfRequired(clazz, mappedResult.stream().findAny().orElse(null));
@@ -643,7 +655,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         ));
 
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
-                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + queryContainerFqName));
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, queryContainerFqName)));
         if (isMapped(queryContainer)) {
             throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
@@ -652,8 +664,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                           queryContainer.getEAllAttributes().stream()
                                         .filter(a -> queryName.equals(a.getName()))
                                         .findAny()
-                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
-                                                                                                      queryContainerFqName, queryName))),
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, queryContainerFqName, queryName))),
                           sanitizeQueryParameters(inputType, inputPayload))
                   .get(queryName));
     }
@@ -682,17 +693,16 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                 try {
                     toReturn = typeCtr.get().newInstance(source);
                 } catch (Exception e) {
-                    throw new RuntimeException("Primitive query result conversion failed", e);
+                    throw new RuntimeException(PRIMITIVE_QUERY_RESULT_CONVERSION_FAILED, e);
                 }
             } else if (stringCtr.isPresent()) {
                 try {
                     toReturn = stringCtr.get().newInstance(String.valueOf(source));
                 } catch (Exception e) {
-                    throw new RuntimeException("Primitive query result conversion failed", e);
+                    throw new RuntimeException(PRIMITIVE_QUERY_RESULT_CONVERSION_FAILED, e);
                 }
             } else {
-                throw new RuntimeException(String.format("Primitive query result cannot be converted: %s => %s",
-                                                         source.getClass().getName(), target.getName()));
+                throw new RuntimeException(String.format(PRIMITIVE_QUERY_RESULT_CANNOT_BE_CONVERTED_FORMAT, source.getClass().getName(), target.getName()));
             }
         }
         return toReturn;
@@ -720,14 +730,13 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                           subject.clazz.getEAllReferences().stream()
                                        .filter(r -> queryName.equals(r.getName()))
                                        .findAny()
-                                       .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
-                                                                                                     subjectFqName, queryName))),
+                                       .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, subjectFqName, queryName))),
                           DAO.QueryCustomizer.<UUID>builder()
                                              .mask(Collections.singletonMap(queryName, true))
                                              .parameters(sanitizeQueryParameters(inputType, inputPayload))
                                              .build()).stream()
                   .map(payload -> createContainer(asmUtils.getClassByFQName(returnTypeFqName)
-                                                          .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + returnTypeFqName)),
+                                                          .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, returnTypeFqName))),
                                                   payload))
                   .collect(Collectors.toList());
     }
@@ -744,19 +753,18 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         ));
 
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
-                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + queryContainerFqName));
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, queryContainerFqName)));
         if (isMapped(queryContainer)) {
             throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
         }
 
         EClass targetType = asmUtils.getClassByFQName(returnTypeFqName)
-                                    .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + returnTypeFqName));
+                                    .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, returnTypeFqName)));
         return dao.searchReferencedInstancesOf(
                           queryContainer.getEAllReferences().stream()
                                         .filter(r -> queryName.equals(r.getName()))
                                         .findAny()
-                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
-                                                                                                      queryContainerFqName, queryName))),
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, queryContainerFqName, queryName))),
                           targetType,
                           DAO.QueryCustomizer.<UUID>builder()
                                              .mask(Collections.singletonMap(queryName, true))
@@ -768,7 +776,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     private Map<String, Object> sanitizeQueryParameters(String inputType, Payload inputPayload) {
         Set<String> possibleParameterNames = asmUtils.getClassByFQName(inputType)
-                                                     .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + inputType))
+                                                     .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, inputType)))
                                                      .getEAllAttributes().stream()
                                                      .map(ENamedElement::getName)
                                                      .collect(Collectors.toSet());
@@ -794,7 +802,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
             EReference ref = container.clazz.getEAllReferences().stream()
                                             .filter(r -> Objects.equals(r.getName(), referenceName))
                                             .findAny()
-                                            .orElseThrow(() -> new IllegalArgumentException(String.format("Relation feature of %s cannot be found: %s",
+                                            .orElseThrow(() -> new IllegalArgumentException(String.format(RELATION_FEATURE_NOT_FOUND_FORMAT,
                                                                                                           AsmUtils.getClassifierFQName(container.clazz),
                                                                                                           referenceName)));
             List<Payload> payloads;
@@ -879,12 +887,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     protected Payload getStaticData(String namespace, String name, String attributeName) {
         String typeFqName = replaceSeparator(getFqName(namespace, name));
         EAttribute eAttribute = asmUtils.getClassByFQName(typeFqName)
-                                        .orElseThrow(() -> new IllegalArgumentException("EClass cannot be found: " + typeFqName))
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, typeFqName)))
                                         .getEAttributes().stream()
                                         .filter(attr -> attr.getName().equals(attributeName))
                                         .findAny()
-                                        .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
-                                                                                                      typeFqName, attributeName)));
+                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, typeFqName, attributeName)));
         return dao.getStaticData(eAttribute);
     }
 
