@@ -603,7 +603,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
     }
 
     // instance
-    protected Object primitiveQueryCall(Container subject, String queryName, String inputType, Payload inputPayload) {
+    protected <T> T primitiveQueryCall(Class<T> clazz, Container subject, String queryName, String inputType, Payload inputPayload) {
         parameterChecks(Map.of(
                 subject, "subject",
                 queryName, "queryName",
@@ -613,7 +613,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         parameterCheck(subject.clazz, "subject.clazz");
 
         if (!isMapped(subject.clazz)) {
-            return primitiveQueryCall(AsmUtils.getClassifierFQName(subject.clazz), queryName, inputType, inputPayload);
+            return primitiveQueryCall(clazz, AsmUtils.getClassifierFQName(subject.clazz), queryName, inputType, inputPayload);
         }
 
         Set<Object> mappedResult = dao.search(subject.clazz,
@@ -629,11 +629,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                             mappedResult.stream().map(Object::toString).collect(Collectors.joining(",")));
         }
 
-        return mappedResult.stream().findAny().orElse(null);
+        return mappedResult.stream().findAny().map(clazz::cast).orElse(null);
     }
 
     // static
-    protected Object primitiveQueryCall(String queryContainerFqName, String queryName, String inputType, Payload inputPayload) {
+    protected <T> T primitiveQueryCall(Class<T> clazz, String queryContainerFqName, String queryName, String inputType, Payload inputPayload) {
         parameterChecks(Map.of(
                 queryContainerFqName, "queryContainerFqName",
                 queryName, "queryName",
@@ -654,7 +654,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                         .orElseThrow(() -> new IllegalArgumentException(String.format("Attribute feature of %s cannot be found: %s",
                                                                                                       queryContainerFqName, queryName))),
                           sanitizeQueryParameters(inputType, inputPayload))
-                  .get(queryName);
+                  .getAs(clazz, queryName);
     }
 
     // instance
