@@ -38,6 +38,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     public static final String PRIMITIVE_QUERY_RESULT_CONVERSION_FAILED = "Primitive query result conversion failed";
     public static final String PRIMITIVE_QUERY_RESULT_CANNOT_BE_CONVERTED_FORMAT = "Primitive query result cannot be converted: %s => %s";
+    public static final String STATIC_QUERY_ON_MAPPED_TRANSFEROBJECTS = "Static parameterized queries are not supported on mapped transferobjects";
 
     protected AbstractGeneratedScript() {
         functionRunner = new FunctionRunner(this);
@@ -642,7 +643,11 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                                           mappedResult.stream().map(Object::toString).collect(Collectors.joining(","))));
         }
 
-        return convertIfRequired(clazz, mappedResult.stream().findAny().orElse(null));
+        Object result = mappedResult.stream().findAny().orElse(null);
+        if (result == null) {
+            return null;
+        }
+        return convertIfRequired(clazz, result);
     }
 
     // static
@@ -657,16 +662,21 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
                                         .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, queryContainerFqName)));
         if (isMapped(queryContainer)) {
-            throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
+            throw new IllegalStateException(STATIC_QUERY_ON_MAPPED_TRANSFEROBJECTS);
         }
 
-        return convertIfRequired(clazz, dao.getParameterizedStaticData(
-                          queryContainer.getEAllAttributes().stream()
-                                        .filter(a -> queryName.equals(a.getName()))
-                                        .findAny()
-                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, queryContainerFqName, queryName))),
-                          sanitizeQueryParameters(inputType, inputPayload))
-                  .get(queryName));
+        Object result =
+                dao.getParameterizedStaticData(queryContainer.getEAllAttributes().stream()
+                                                             .filter(a -> queryName.equals(a.getName()))
+                                                             .findAny()
+                                                             .orElseThrow(() -> new IllegalArgumentException(
+                                                                     String.format(ATTRIBUTE_NOT_FOUND_FORMAT, queryContainerFqName, queryName))),
+                                               sanitizeQueryParameters(inputType, inputPayload))
+                   .get(queryName);
+        if (result == null) {
+            return null;
+        }
+        return convertIfRequired(clazz, result);
     }
 
     private static <T> T convertIfRequired(Class<T> target, Object source) {
@@ -755,7 +765,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         EClass queryContainer = asmUtils.getClassByFQName(queryContainerFqName)
                                         .orElseThrow(() -> new IllegalArgumentException(String.format(ECLASS_NOT_FOUND_FORMAT, queryContainerFqName)));
         if (isMapped(queryContainer)) {
-            throw new IllegalStateException("Static parameterized queries are not supported on mapped transferobjects");
+            throw new IllegalStateException(STATIC_QUERY_ON_MAPPED_TRANSFEROBJECTS);
         }
 
         EClass targetType = asmUtils.getClassByFQName(returnTypeFqName)
