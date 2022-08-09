@@ -1,2 +1,15 @@
-# judo-operation-utils
+= judo-operation-utils
 
+image::https://github.com/BlackBeltTechnology/judo-meta-rdbms/actions/workflows/build.yml/badge.svg?branch=develop[link="https://github.com/BlackBeltTechnology/judo-meta-rdbms/actions/workflows/build.yml" float="center"]
+
+== Introduction
+
+Utility methods for operations scripts. Used by the Dispatcher in the https://github.com/BlackBeltTechnology/judo-runtime-core[judo-runtime-core].
+
+== Contributing to the project
+
+Everyone is welcome to contribute to JUDO! As a starter, please read the corresponding link:CONTRIBUTING.adoc[CONTRIBUTING] guide for details!
+
+== License
+
+This project is licensed under the https://www.eclipse.org/legal/epl-2.0/[Eclipse Public License - v 2.0].
