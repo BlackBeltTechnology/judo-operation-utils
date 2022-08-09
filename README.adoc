@@ -1,6 +1,6 @@
 = judo-operation-utils
 
-image::https://github.com/BlackBeltTechnology/judo-meta-rdbms/actions/workflows/build.yml/badge.svg?branch=develop[link="https://github.com/BlackBeltTechnology/judo-meta-rdbms/actions/workflows/build.yml" float="center"]
+image::https://github.com/BlackBeltTechnology/judo-operation-utils/actions/workflows/build.yml/badge.svg?branch=develop[link="https://github.com/BlackBeltTechnology/judo-operation-utils/actions/workflows/build.yml" float="center"]
 
 == Introduction
 
