@@ -52,9 +52,9 @@
 
         <log4j.configuration>log4j.properties</log4j.configuration>
 
-        <judo-dao-api-version>1.0.2.20220301_152834_cea2e81e_develop</judo-dao-api-version>
-        <judo-dispatcher-api-version>1.0.2.20220301_152852_a63b2efa_develop</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.0.20220629_125026_5f754291_develop</judo-meta-asm-version>
+        <judo-dao-api-version>1.0.2.20220810_200245_6445bc6d_develop</judo-dao-api-version>
+        <judo-dispatcher-api-version>1.0.2.20220810_200257_7e8db32f_develop</judo-dispatcher-api-version>
+        <judo-meta-asm-version>1.1.0.20220810_200335_414c916c_develop</judo-meta-asm-version>
     </properties>
 
     <url>http://github.com/${project-repositoryId}</url>
