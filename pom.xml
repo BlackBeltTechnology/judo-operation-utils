@@ -54,9 +54,9 @@
         <lombok-version>1.18.24</lombok-version>
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
-        <judo-dao-api-version>1.0.2</judo-dao-api-version>
-        <judo-dispatcher-api-version>1.0.2</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.1</judo-meta-asm-version>
+        <judo-dao-api-version>1.0.3.20220930_100653_2b31acaa_develop</judo-dao-api-version>
+        <judo-dispatcher-api-version>1.0.3.20220926_012329_fb44a05f_develop</judo-dispatcher-api-version>
+        <judo-meta-asm-version>1.1.2.20221005_232439_c35b63bf_develop</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
