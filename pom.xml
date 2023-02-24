@@ -54,7 +54,7 @@
         <lombok-version>1.18.24</lombok-version>
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
-        <judo-dao-api-version>1.0.4.20230220_143639_1b57297f_feature_JNG_4289_Division_on_derived_returns_different_value_for_PSQL_vs_HSQL</judo-dao-api-version>
+        <judo-dao-api-version>1.0.4.20230223_142100_ea2fecf6_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.2</judo-dispatcher-api-version>
         <judo-meta-asm-version>1.1.4.20230207_041953_d839053d_develop</judo-meta-asm-version>
 
