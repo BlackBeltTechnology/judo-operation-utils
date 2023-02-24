@@ -56,7 +56,7 @@
 
         <judo-dao-api-version>1.0.4.20230223_142100_ea2fecf6_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.2</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.4.20230207_041953_d839053d_develop</judo-meta-asm-version>
+        <judo-meta-asm-version>1.1.4.20230224_162040_b3edd881_feature_JNG_4269_SemiAutomaticSchemaUpgrade</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
