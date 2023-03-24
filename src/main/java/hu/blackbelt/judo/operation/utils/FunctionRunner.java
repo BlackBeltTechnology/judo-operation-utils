@@ -180,11 +180,11 @@ public class FunctionRunner {
         return Instant.ofEpochMilli(Math.round(average)).atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
-    public OffsetDateTime avgTimestamp(Collection<Container> containers, Function<Holder<Container>, OffsetDateTime> generator) {
+    public LocalDateTime avgTimestamp(Collection<Container> containers, Function<Holder<Container>, LocalDateTime> generator) {
         double average = containers.stream().map(container -> {
             return generator.apply(containerHolder(container));
-        }).mapToLong(d -> d.toInstant().toEpochMilli()).average().getAsDouble();
-        return Instant.ofEpochMilli(Math.round(average)).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+        }).mapToLong(d -> d.toInstant(ZoneOffset.UTC).toEpochMilli()).average().getAsDouble();
+        return Instant.ofEpochMilli(Math.round(average)).atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 
     public LocalTime avgTime(Collection<Container> containers, Function<Holder<Container>, LocalTime> generator) {
@@ -388,7 +388,7 @@ public class FunctionRunner {
             } else if (AsmUtils.isBoolean(dataType)) {
                 result = script.variableResolver.resolve(Boolean.class, categoryName, variableName);
             } else if (AsmUtils.isTimestamp(dataType)) {
-                result = script.variableResolver.resolve(OffsetDateTime.class, categoryName, variableName);
+                result = script.variableResolver.resolve(LocalDateTime.class, categoryName, variableName);
             } else if (AsmUtils.isTime(dataType)) {
                 result = script.variableResolver.resolve(LocalTime.class, categoryName, variableName);
             } else if (AsmUtils.isDate(dataType)) {
