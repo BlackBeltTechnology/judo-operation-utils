@@ -40,7 +40,8 @@
             !lombok,
             javax.annotation;version="[1.0,2)",
             com.google.gson;version="[2.1,3)",
-            com.google.gson.stream;version="[2.1,3)"
+            com.google.gson.stream;version="[2.1,3)",
+            org.slf4j;version="[1.6,3)",
         </osgi-default-import>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -50,13 +51,13 @@
 
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <slf4j-version>1.7.32</slf4j-version>
+        <slf4j-version>2.0.7</slf4j-version>
         <lombok-version>1.18.24</lombok-version>
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
-        <judo-dao-api-version>1.0.4.20230816_142422_cb6840c0_develop</judo-dao-api-version>
-        <judo-dispatcher-api-version>1.0.3.20230816_142421_1937eceb_develop</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.4.20230817_235120_8599d680_develop</judo-meta-asm-version>
+        <judo-dao-api-version>1.0.4.20230824_181930_da36ffe3_feature_JNG_5144_ReplaceLogger</judo-dao-api-version>
+        <judo-dispatcher-api-version>1.0.3.20230824_181942_1429f006_feature_JNG_5144_ReplaceLogger</judo-dispatcher-api-version>
+        <judo-meta-asm-version>1.1.4.20230825_132003_a60831e8_feature_JNG_5144_ReplaceLogger</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
