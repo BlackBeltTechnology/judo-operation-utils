@@ -345,7 +345,7 @@ public class FunctionRunner {
         boolean result = false;
         result = result || targetClass.equals(container.clazz);
         if (script.asmUtils.isMappedTransferObjectType(container.clazz) && script.asmUtils.isMappedTransferObjectType(targetClass)) {
-            String entityTypeName = container.getPayload().getAs(String.class, ENTITY_TYPE);
+            String entityTypeName = script.asmUtils.getModel().get().getName() + "." + container.getPayload().getAs(String.class, ENTITY_TYPE);
             EClass sourceEntityType = script.asmUtils.getClassByFQName(entityTypeName).get();
             EClass targetEntityType = script.asmUtils.getMappedEntityType(targetClass).get();
             result = result || sourceEntityType.equals(targetEntityType);
