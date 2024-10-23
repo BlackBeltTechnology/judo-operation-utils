@@ -56,7 +56,7 @@
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
         <judo-dao-api-version>1.0.4.20240411_140837_58d4ecbd_develop</judo-dao-api-version>
-        <judo-dispatcher-api-version>1.0.3.20230826_230134_1ce94d88_develop</judo-dispatcher-api-version>
+        <judo-dispatcher-api-version>1.0.3.20241023_152318_e5fe1853_feature_JNG_5670_InterceptorBusinessException_JNG_5988_LocaleSupport</judo-dispatcher-api-version>
         <judo-meta-asm-version>1.1.4.20240414_042403_a93471de_develop</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
