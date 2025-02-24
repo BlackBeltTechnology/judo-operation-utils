@@ -57,7 +57,7 @@
 
         <judo-dao-api-version>1.0.4.20250221_195509_0f031dbc_develop</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.3.20241127_150146_84f2988d_develop</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.4.20250222_040638_f76154e1_develop</judo-meta-asm-version>
+        <judo-meta-asm-version>1.1.4.20250223_165242_726a4a16_feature_JNG_6182_Instance_Transfer_Operations_not_Registed_during_karaf_runtime</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
