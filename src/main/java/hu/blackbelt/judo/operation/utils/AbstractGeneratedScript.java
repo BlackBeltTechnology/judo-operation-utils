@@ -97,7 +97,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
     }
 
-    protected DAO<UUID> dao;
+    protected DAO dao;
     protected Dispatcher dispatcher;
     protected IdentifierProvider<UUID> idProvider;
     protected AsmModel asmModel;
@@ -112,7 +112,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected FunctionRunner functionRunner;
 
-    public void setDao(DAO<UUID> dao) {
+    public void setDao(DAO dao) {
         this.dao = dao;
     }
 
@@ -651,7 +651,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         }
 
         Set<Object> mappedResult = dao.search(subject.clazz,
-                                              DAO.QueryCustomizer.<UUID>builder()
+                                              DAO.QueryCustomizer.builder()
                                                                  .mask(Collections.singletonMap(queryName, true))
                                                                  .parameters(sanitizeQueryParameters(inputType, inputPayload))
                                                                  .instanceIds(Collections.singletonList(subject.getId()))
@@ -761,7 +761,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                        .filter(r -> queryName.equals(r.getName()))
                                        .findAny()
                                        .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, subjectFqName, queryName))),
-                          DAO.QueryCustomizer.<UUID>builder()
+                          DAO.QueryCustomizer.builder()
                                              .mask(Collections.singletonMap(queryName, true))
                                              .parameters(sanitizeQueryParameters(inputType, inputPayload))
                                              .build()).stream()
@@ -796,7 +796,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
                                         .findAny()
                                         .orElseThrow(() -> new IllegalArgumentException(String.format(ATTRIBUTE_NOT_FOUND_FORMAT, queryContainerFqName, queryName))),
                           targetType,
-                          DAO.QueryCustomizer.<UUID>builder()
+                          DAO.QueryCustomizer.builder()
                                              .mask(Collections.singletonMap(queryName, true))
                                              .parameters(sanitizeQueryParameters(inputType, inputPayload))
                                              .build()).stream()
