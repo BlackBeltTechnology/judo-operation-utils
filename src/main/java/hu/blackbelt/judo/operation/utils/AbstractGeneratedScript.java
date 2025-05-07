@@ -99,7 +99,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
 
     protected DAO dao;
     protected Dispatcher dispatcher;
-    protected IdentifierProvider<UUID> idProvider;
+    protected IdentifierProvider idProvider;
     protected AsmModel asmModel;
     protected VariableResolver variableResolver;
 
@@ -120,7 +120,7 @@ public abstract class AbstractGeneratedScript implements Function<Payload, Paylo
         this.dispatcher = dispatcher;
     }
 
-    public void setIdProvider(IdentifierProvider<UUID> idProvider) {
+    public void setIdProvider(IdentifierProvider idProvider) {
         this.idProvider = idProvider;
     }
 
