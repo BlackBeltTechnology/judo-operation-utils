@@ -55,7 +55,7 @@
         <lombok-version>1.18.34</lombok-version>
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
-        <judo-dao-api-version>1.0.4.20250429_154325_513abdc5_feature_JNG_6177_remove_generic_type_parameter_from_DAO_class</judo-dao-api-version>
+        <judo-dao-api-version>1.0.4.20250507_120859_eb33cf6c_feature_JNG_6177_remove_generic_type_parameter_from_DAO_class</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.3.20241127_150146_84f2988d_develop</judo-dispatcher-api-version>
         <judo-meta-asm-version>1.1.4.20250224_090702_f96624c2_develop</judo-meta-asm-version>
 
