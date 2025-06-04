@@ -55,9 +55,9 @@
         <lombok-version>1.18.34</lombok-version>
         <osgi-ds-version>1.3.0</osgi-ds-version>
 
-        <judo-dao-api-version>1.0.4.20250601_195940_6f6f2f06_feature_JNG_6310_UpdateEpsilon</judo-dao-api-version>
-        <judo-dispatcher-api-version>1.0.3.20250601_195954_884c8770_feature_JNG_6310_UpdateEpsilon</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.4.20250602_090702_148f6b2e_feature_JNG_6310_UpdateEpsilon</judo-meta-asm-version>
+        <judo-dao-api-version>1.0.4.20250604_005315_768f80d4_feature_JNG_6310_UpdateEpsilon</judo-dao-api-version>
+        <judo-dispatcher-api-version>1.0.3.20250604_005327_6d1e7640_feature_JNG_6310_UpdateEpsilon</judo-dispatcher-api-version>
+        <judo-meta-asm-version>1.1.4.20250604_010838_37156b2f_feature_JNG_6310_UpdateEpsilon</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
@@ -526,7 +526,7 @@
                     <plugin>
                         <groupId>org.simplify4u.plugins</groupId>
                         <artifactId>sign-maven-plugin</artifactId>
-                        <version>1.0.1</version>
+                        <version>1.1.0</version>
                         <executions>
                             <execution>
                                 <goals>
