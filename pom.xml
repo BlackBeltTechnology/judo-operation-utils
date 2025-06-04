@@ -57,7 +57,7 @@
 
         <judo-dao-api-version>1.0.4.20250604_005315_768f80d4_feature_JNG_6310_UpdateEpsilon</judo-dao-api-version>
         <judo-dispatcher-api-version>1.0.3.20250604_005327_6d1e7640_feature_JNG_6310_UpdateEpsilon</judo-dispatcher-api-version>
-        <judo-meta-asm-version>1.1.4.20250604_010838_37156b2f_feature_JNG_6310_UpdateEpsilon</judo-meta-asm-version>
+        <judo-meta-asm-version>1.1.4.20250604_122322_fb1ed7cc_feature_JNG_6310_UpdateEpsilon</judo-meta-asm-version>
 
         <!--suppress UnresolvedMavenProperty -->
         <logback-test-config>${maven.multiModuleProjectDirectory}/logback-test.xml</logback-test-config>
