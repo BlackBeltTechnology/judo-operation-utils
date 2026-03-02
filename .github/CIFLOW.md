@@ -38,14 +38,14 @@ gitGraph
     commit id: "fix-4"
     checkout release/1.0-beta1
     merge bugfix/JNG-4 id: "merge-fix"
-    checkout main
+    checkout master
     merge release/1.0-beta1 id: "release-1.0"
     checkout develop
     commit id: "dev-2"
     branch release/1.1-beta1
     checkout release/1.1-beta1
     commit id: "rc-2"
-    checkout main
+    checkout master
     merge release/1.1-beta1 id: "release-1.1"
 ```
 
