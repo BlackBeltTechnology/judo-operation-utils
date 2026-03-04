@@ -23,6 +23,18 @@ Key facts:
 - [src/main/java/hu/blackbelt/judo/operation/utils/FunctionRunner.java](src/main/java/hu/blackbelt/judo/operation/utils/FunctionRunner.java): Collection and query utilities — filter, sort, head/tail, aggregations, string operations, actor/principal lookup
 - [src/main/java/hu/blackbelt/judo/operation/utils/Kleene.java](src/main/java/hu/blackbelt/judo/operation/utils/Kleene.java): Three-valued (null-safe) boolean logic — and, or, xor, implies, not per strong Kleene semantics
 
+## Depends on
+
+- [judo-meta-asm](../../models/judo-meta-asm): models/judo-meta-asm
+- [judo-dao-api](../judo-dao-api): runtime/judo-dao-api
+- [judo-dispatcher-api](../judo-dispatcher-api): runtime/judo-dispatcher-api
+
+## Used by
+
+- [judo-tatami](../judo-tatami): runtime/judo-tatami
+- [judo-tatami-base](../judo-tatami-base): runtime/judo-tatami-base
+- [judo-tatami-jsl](../judo-tatami-jsl): runtime/judo-tatami-jsl
+
 ## Optional
 
 - [pom.xml](pom.xml): Maven build configuration with dependencies, plugins, profiles, and OSGi bundle instructions
