@@ -1,0 +1,29 @@
+# JUDO Operation Utils
+
+> Runtime utility library providing the abstract base class, container system, collection operations, and three-valued boolean logic that all JUDO-generated operation scripts depend on.
+
+Key facts:
+- Java 21, single-module Maven project (OSGi bundle packaging)
+- Build with Maven Wrapper: `./mvnw clean install`
+- Core dependency of JUDO generated scripts — not used directly by applications
+- Built on Eclipse EMF (Ecore), judo-meta-asm (Architecture Specific Model), judo-dao-api, judo-dispatcher-api
+- Key components: `AbstractGeneratedScript`, `Container`, `FunctionRunner`, `Kleene`
+- License: Eclipse Public License 2.0 (EPL-2.0)
+
+## Docs
+
+- [README.md](README.md): Project overview with architecture and sequence diagrams
+- [AGENTS.md](AGENTS.md): Detailed developer guide — build commands, directory structure, technology stack, and coding conventions
+- [CONTRIBUTING.md](CONTRIBUTING.md): How to submit issues and pull requests
+- [.github/CIFLOW.md](.github/CIFLOW.md): CI/CD workflow documentation with flow diagrams
+
+## Source
+
+- [src/main/java/hu/blackbelt/judo/operation/utils/AbstractGeneratedScript.java](src/main/java/hu/blackbelt/judo/operation/utils/AbstractGeneratedScript.java): Core base class for generated scripts — implements `Function<Payload, Payload>`, manages Container lifecycle, CRUD, query execution, and coercion
+- [src/main/java/hu/blackbelt/judo/operation/utils/FunctionRunner.java](src/main/java/hu/blackbelt/judo/operation/utils/FunctionRunner.java): Collection and query utilities — filter, sort, head/tail, aggregations, string operations, actor/principal lookup
+- [src/main/java/hu/blackbelt/judo/operation/utils/Kleene.java](src/main/java/hu/blackbelt/judo/operation/utils/Kleene.java): Three-valued (null-safe) boolean logic — and, or, xor, implies, not per strong Kleene semantics
+
+## Optional
+
+- [pom.xml](pom.xml): Maven build configuration with dependencies, plugins, profiles, and OSGi bundle instructions
+- [LICENSE.txt](LICENSE.txt): Eclipse Public License 2.0 full text
