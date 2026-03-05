@@ -25,15 +25,15 @@ Key facts:
 
 ## Depends on
 
-- [judo-meta-asm](../../models/judo-meta-asm): models/judo-meta-asm
-- [judo-dao-api](../judo-dao-api): runtime/judo-dao-api
-- [judo-dispatcher-api](../judo-dispatcher-api): runtime/judo-dispatcher-api
+- [judo-meta-asm](../../models/judo-meta-asm): ASM metamodel — Ecore-based architecture model with builders and validation
+- [judo-dao-api](../judo-dao-api): Core DAO interfaces for CRUD, query, navigation, and validation
+- [judo-dispatcher-api](../judo-dispatcher-api): Dispatcher API contracts for routing API calls to runtime actions
 
 ## Used by
 
-- [judo-tatami](../judo-tatami): runtime/judo-tatami
-- [judo-tatami-base](../judo-tatami-base): runtime/judo-tatami-base
-- [judo-tatami-jsl](../judo-tatami-jsl): runtime/judo-tatami-jsl
+- [judo-tatami](../judo-tatami): Model transformation pipeline — ESM/PSM to deployable application artifacts
+- [judo-tatami-base](../judo-tatami-base): PSM transformation pipeline — models to schemas, expressions, and configurations
+- [judo-tatami-jsl](../judo-tatami-jsl): JSL-to-runtime model transformation engine (PSM, ASM, UI, RDBMS, etc.)
 
 ## Optional
 
